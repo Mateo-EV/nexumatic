@@ -15,11 +15,6 @@ const config = {
       },
     ],
   },
-  experimental: {
-    staleTimes: {
-      dynamic: 5 * 60,
-    },
-  },
 };
 
 export default config;

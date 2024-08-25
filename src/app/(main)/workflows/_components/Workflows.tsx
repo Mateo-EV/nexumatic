@@ -12,15 +12,12 @@ import { api } from "@/trpc/react";
 import { useTransitionRouter } from "next-view-transitions";
 import { useEffect } from "react";
 import { WorkflowDeleteButton } from "./WorkflowDeleteButton";
+import { Skeleton } from "@/components/ui/skeleton";
 
-type WorkflowsProps = {
-  initialData: WorkFlow[];
-};
+export const Workflows = () => {
+  const { data: workflows } = api.workflow.getAllFromUser.useQuery();
 
-export const Workflows = ({ initialData }: WorkflowsProps) => {
-  const { data: workflows } = api.workflow.getAllFromUser.useQuery(undefined, {
-    initialData,
-  });
+  if (!workflows) return <WorkflowsSkeleton />;
 
   if (workflows.length)
     return workflows.map((workflow) => (
@@ -36,6 +33,18 @@ export const Workflows = ({ initialData }: WorkflowsProps) => {
 
 type WorkflowProps = {
   workflow: WorkFlow;
+};
+
+const WorkflowsSkeleton = () => {
+  const workflow = <Skeleton className="h-20 w-full" />;
+
+  return (
+    <>
+      {workflow}
+      {workflow}
+      {workflow}
+    </>
+  );
 };
 
 const handleClickStopPropagation = (e: React.MouseEvent) => {

@@ -1,5 +1,6 @@
 import { api } from "@/trpc/server";
 import { redirect } from "next/navigation";
+import { EditorCanvas } from "./_components/EditorCanvas";
 
 export default async function WorkflowIdPage({
   params: { workflowId },
@@ -11,9 +12,9 @@ export default async function WorkflowIdPage({
   if (!workflow) redirect("/");
 
   return (
-    <main className="relative flex flex-col">
+    <main className="flex h-[calc(100vh-6.7rem)] flex-col">
       <div
-        className="sticky top-0 flex items-end border-b bg-background/50 px-6 backdrop-blur-lg"
+        className="sticky top-0 flex items-end border-b bg-background/50 px-6 pt-8 backdrop-blur-lg"
         style={{ viewTransitionName: `workflow-container-${workflow.id}` }}
       >
         <div className="pb-4">
@@ -35,7 +36,9 @@ export default async function WorkflowIdPage({
           )}
         </div>
       </div>
-      <section className="flex flex-col gap-4 py-4"></section>
+      <section className="flex-1">
+        <EditorCanvas />
+      </section>
     </main>
   );
 }

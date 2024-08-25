@@ -16,12 +16,8 @@ export default async function MainLayout({
 
   return (
     <AuthProvider session={session}>
-      <div className="flex min-h-screen flex-col">
-        <Navbar />
-        <div className="pt-8">
-          <TRPCReactProvider>{children}</TRPCReactProvider>
-        </div>
-      </div>
+      <Navbar />
+      <TRPCReactProvider>{children}</TRPCReactProvider>
       <Toaster position="top-center" />
     </AuthProvider>
   );
