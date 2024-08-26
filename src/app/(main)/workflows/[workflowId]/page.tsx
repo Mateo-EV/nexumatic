@@ -1,6 +1,8 @@
+import { WorkflowProvider } from "@/providers/WorkflowProvider";
+import { getAvailableServicesForUser } from "@/server/db/data";
 import { api } from "@/trpc/server";
 import { redirect } from "next/navigation";
-import { EditorCanvas } from "./_components/EditorCanvas";
+import { WorkflowManagement } from "./_components/WorkflowManagement";
 
 export default async function WorkflowIdPage({
   params: { workflowId },
@@ -10,6 +12,8 @@ export default async function WorkflowIdPage({
   const workflow = await api.workflow.getById(workflowId);
 
   if (!workflow) redirect("/");
+
+  const services = await getAvailableServicesForUser();
 
   return (
     <main className="flex h-[calc(100vh-6.7rem)] flex-col">
@@ -37,7 +41,9 @@ export default async function WorkflowIdPage({
         </div>
       </div>
       <section className="flex-1">
-        <EditorCanvas />
+        <WorkflowProvider services={services} workflow={workflow}>
+          <WorkflowManagement />
+        </WorkflowProvider>
       </section>
     </main>
   );

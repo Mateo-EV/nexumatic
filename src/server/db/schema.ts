@@ -369,9 +369,10 @@ export const taskDependencies = pgTable(
     taskId: uuid("task_id")
       .notNull()
       .references(() => tasks.id, { onDelete: "cascade", onUpdate: "cascade" }),
-    dependsOnTaskId: uuid("depends_on_task_id")
-      .notNull()
-      .references(() => tasks.id, { onDelete: "cascade", onUpdate: "cascade" }),
+    dependsOnTaskId: uuid("depends_on_task_id").references(() => tasks.id, {
+      onDelete: "cascade",
+      onUpdate: "cascade",
+    }),
     createdAt: timestamp("created_at", {
       precision: 0,
       mode: "date",

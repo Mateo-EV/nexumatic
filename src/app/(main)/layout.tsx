@@ -4,6 +4,7 @@ import { Navbar } from "./_components/Navbar";
 import { TRPCReactProvider } from "@/trpc/react";
 import { AuthProvider } from "@/providers/AuthProvider";
 import { Toaster } from "@/components/ui/sonner";
+import "reactflow/dist/style.css";
 
 export default async function MainLayout({
   children,
