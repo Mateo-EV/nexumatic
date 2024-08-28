@@ -1,53 +1,36 @@
 "use client";
 
-import { type ServicesCardTypes } from "@/config/const";
-import { type WorkFlow } from "@/server/db/schema";
-import { createContext, useCallback, useContext, useState } from "react";
-import {
-  applyNodeChanges,
-  Node as LibNode,
-  NodeChange,
-  Edge as LibEdge,
-  EdgeChange,
-} from "reactflow";
+import { type getAvailableServicesForUser } from "@/server/db/data";
+import { type ServiceClient, type WorkFlow } from "@/server/db/schema";
+import { createContext, useContext, useState } from "react";
+import { type Edge as LibEdge, type Node as LibNode } from "reactflow";
 
 const WorkflowContext = createContext({});
 
 type WorkflowProviderProps = {
   children: React.ReactNode;
   workflow: WorkFlow;
-  services: {
-    id: string;
-    name: string;
-  }[];
+  services: Awaited<ReturnType<typeof getAvailableServicesForUser>>;
 };
-
-export type NodeData = {
-  name: string;
-  description: string;
-  type: keyof typeof ServicesCardTypes;
-};
-
-export type Node = LibNode<NodeData, NodeData["type"]>;
+export type Node = LibNode<ServiceClient>;
 
 export type Edge = LibEdge;
 
 export type Editor = {
   nodes: Node[];
   edges: Edge[];
-  selectedNode: Node;
+  selectedNode?: Node;
 };
 
 export type WorkflowContextProps = {
   workflow: WorkFlow;
-  services: {
-    id: string;
-    name: string;
-  }[];
+  services: Awaited<ReturnType<typeof getAvailableServicesForUser>>;
   editor: Editor;
   setNodes: React.Dispatch<React.SetStateAction<Node[]>>;
   setEdges: React.Dispatch<React.SetStateAction<Edge[]>>;
   setSelectedNode: React.Dispatch<React.SetStateAction<Node>>;
+  thereIsTrigger: boolean;
+  setThereIsTrigger: React.Dispatch<React.SetStateAction<boolean>>;
 };
 
 export const WorkflowProvider = ({
@@ -56,14 +39,11 @@ export const WorkflowProvider = ({
   services,
 }: WorkflowProviderProps) => {
   const [nodes, setNodes] = useState<Node[]>([]);
-
   const [edges, setEdges] = useState<Edge[]>([]);
 
-  const [selectedNode, setSelectedNode] = useState<Node>({
-    id: "",
-    data: { name: "", description: "", type: "Discord" },
-    position: { x: 0, y: 0 },
-  });
+  const [selectedNode, setSelectedNode] = useState<Node>();
+
+  const [thereIsTrigger, setThereIsTrigger] = useState(false);
 
   return (
     <WorkflowContext.Provider
@@ -75,6 +55,8 @@ export const WorkflowProvider = ({
           setNodes,
           setEdges,
           setSelectedNode,
+          thereIsTrigger,
+          setThereIsTrigger,
         } as WorkflowContextProps
       }
     >

@@ -1,6 +1,7 @@
 import { WorkflowProvider } from "@/providers/WorkflowProvider";
 import { getAvailableServicesForUser } from "@/server/db/data";
 import { api } from "@/trpc/server";
+import { revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { WorkflowManagement } from "./_components/WorkflowManagement";
 
@@ -13,6 +14,7 @@ export default async function WorkflowIdPage({
 
   if (!workflow) redirect("/");
 
+  // revalidateTag("services");
   const services = await getAvailableServicesForUser();
 
   return (

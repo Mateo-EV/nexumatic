@@ -2,11 +2,13 @@ import { type InferSelectModel, relations } from "drizzle-orm";
 import {
   index,
   integer,
+  jsonb,
   pgTable,
   primaryKey,
   serial,
   text,
   timestamp,
+  unique,
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
@@ -196,6 +198,11 @@ export const subscriptionsRelations = relations(subscriptions, ({ one }) => ({
 
 export type Subscription = InferSelectModel<typeof subscriptions>;
 
+export type WorkFlowTemplate = {
+  content: "";
+  file: "";
+};
+
 export const workflows = pgTable("workflows", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: uuid("user_id")
@@ -203,6 +210,7 @@ export const workflows = pgTable("workflows", {
     .references(() => users.id, { onDelete: "restrict", onUpdate: "cascade" }),
   name: varchar("name", { length: 255 }).notNull(),
   description: varchar("description", { length: 255 }),
+  template: jsonb("template").$type<WorkFlowTemplate>(),
   createdAt: timestamp("created_at", {
     precision: 0,
     mode: "date",
@@ -231,56 +239,42 @@ export const workflowsRelations = relations(workflows, ({ one, many }) => ({
 
 export type WorkFlow = InferSelectModel<typeof workflows>;
 
-export const services = pgTable("services", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  name: varchar("name", { length: 255 }).notNull(),
-  endpoint: varchar("endpoint", { length: 255 }),
-  createdAt: timestamp("created_at", {
-    precision: 0,
-    mode: "date",
-    withTimezone: true,
-  }).defaultNow(),
-  updatedAt: timestamp("updated_at", {
-    precision: 0,
-    mode: "date",
-    withTimezone: true,
-  })
-    .notNull()
-    .defaultNow()
-    .$onUpdate(() => new Date()),
-});
+export type ServicesMethods<T = unknown> = {
+  Discord: { postMessage: T };
+  ["Google Drive"]: { listenFilesAdded: T };
+  OneDrive: { listenFilesAdded: T };
+  Notion: { addBlock: T };
+  Slack: { postMessage: T };
+  Twitter: { postTweet: T };
+  Youtube: { postContent: T };
+  Facebook: { postContent: T };
+  Instagram: { postContent: T };
+  Gmail: { sendEmail: T };
+  Email: { sendEmail: T };
+  Outlook: { sendEmail: T };
+  ["Manual Trigger"]: { clickButton: T };
+};
 
-export type Service = InferSelectModel<typeof services>;
+export type ServicesTypes = "trigger" | "action";
 
-export const servicesRelations = relations(services, ({ many }) => ({
-  connections: many(connections),
-  tasks: many(tasks),
-  taskDependencies: many(taskDependencies),
-}));
+export type ServiceMethods = {
+  [K in keyof ServicesMethods]: keyof ServicesMethods[K];
+}[keyof ServicesMethods];
 
-export const connections = pgTable(
-  "connections",
+export const services = pgTable(
+  "services",
   {
-    userId: uuid("user_id")
+    id: uuid("id").defaultRandom().primaryKey(),
+    name: varchar("name", { length: 255 })
       .notNull()
-      .references(() => users.id, { onDelete: "cascade", onUpdate: "cascade" }),
-    serviceId: uuid("service_id")
-      .notNull()
-      .references(() => services.id, {
-        onDelete: "restrict",
-        onUpdate: "cascade",
-      }),
-    serviceProviderId: varchar("service_provider_id", { length: 80 }).notNull(),
-    accessToken: text("access_token"), // Token de autenticación para el servicio
-    refreshToken: text("refresh_token"),
-    expiresAt: timestamp("expires_at"), // Fecha de expiración del token
+      .$type<keyof ServicesMethods>(),
+    type: varchar("type", { length: 50 }).notNull().$type<ServicesTypes>(),
+    method: varchar("method", { length: 50 }).notNull().$type<ServiceMethods>(),
     createdAt: timestamp("created_at", {
       precision: 0,
       mode: "date",
       withTimezone: true,
-    })
-      .notNull()
-      .defaultNow(),
+    }).defaultNow(),
     updatedAt: timestamp("updated_at", {
       precision: 0,
       mode: "date",
@@ -291,9 +285,51 @@ export const connections = pgTable(
       .$onUpdate(() => new Date()),
   },
   (table) => ({
-    pk: primaryKey({ columns: [table.userId, table.serviceId] }),
+    unq: unique().on(table.name, table.method),
   }),
 );
+
+export type Service = InferSelectModel<typeof services>;
+
+export type ServiceClient = Omit<Service, "createdAt" | "updatedAt">;
+
+export const servicesRelations = relations(services, ({ many }) => ({
+  connections: many(connections),
+  tasks: many(tasks),
+  taskDependencies: many(taskDependencies),
+}));
+
+export const connections = pgTable("connections", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade", onUpdate: "cascade" }),
+  serviceId: uuid("service_id")
+    .notNull()
+    .references(() => services.id, {
+      onDelete: "restrict",
+      onUpdate: "cascade",
+    }),
+  serviceProviderId: varchar("service_provider_id", { length: 80 }).notNull(),
+  accessToken: text("access_token"), // Token de autenticación para el servicio
+  refreshToken: text("refresh_token"),
+  expiresAt: timestamp("expires_at"), // Fecha de expiración del token
+  createdAt: timestamp("created_at", {
+    precision: 0,
+    mode: "date",
+    withTimezone: true,
+  })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", {
+    precision: 0,
+    mode: "date",
+    withTimezone: true,
+  })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
 
 export const connectionsRelations = relations(connections, ({ one }) => ({
   user: one(users, {
@@ -307,6 +343,26 @@ export const connectionsRelations = relations(connections, ({ one }) => ({
 }));
 
 export type Connection = InferSelectModel<typeof connections>;
+
+export type TaskTemplates = {
+  Discord: {
+    postMessage: {
+      channelId: string;
+      webhookUrl: string;
+      guild: string;
+      template?: WorkFlowTemplate | null;
+    };
+  };
+
+  GoogleDrive: {
+    listenFilesAdded: {
+      channelId: string;
+      webhookUrl: string;
+      guild: string;
+      template?: WorkFlowTemplate | null;
+    };
+  };
+};
 
 export const tasks = pgTable("tasks", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -322,8 +378,10 @@ export const tasks = pgTable("tasks", {
       onDelete: "restrict",
       onUpdate: "cascade",
     }),
-  taskType: varchar("task_type", { length: 255 }),
-  taskDetails: text("task_details"), // JSONB en PostgreSQL
+  taskDetails: jsonb("task_details").$type<
+    | TaskTemplates["Discord"]["postMessage"]
+    | TaskTemplates["GoogleDrive"]["listenFilesAdded"]
+  >(),
   createdAt: timestamp("created_at", {
     precision: 0,
     mode: "date",
