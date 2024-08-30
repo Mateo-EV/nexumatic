@@ -235,6 +235,7 @@ export const workflowsRelations = relations(workflows, ({ one, many }) => ({
   }),
   tasks: many(tasks),
   workflowRuns: many(workflowRuns),
+  tasksDependencies: many(taskDependencies),
 }));
 
 export type WorkFlow = InferSelectModel<typeof workflows>;
@@ -344,13 +345,12 @@ export const connectionsRelations = relations(connections, ({ one }) => ({
 
 export type Connection = InferSelectModel<typeof connections>;
 
-export type TaskTemplates = {
+type TaskConfiguration = {
   Discord: {
     postMessage: {
       channelId: string;
       webhookUrl: string;
       guild: string;
-      template?: WorkFlowTemplate | null;
     };
   };
 
@@ -359,9 +359,19 @@ export type TaskTemplates = {
       channelId: string;
       webhookUrl: string;
       guild: string;
-      template?: WorkFlowTemplate | null;
     };
   };
+};
+
+export type TaskDetails = {
+  template?: WorkFlowTemplate | null;
+  position: {
+    x: number;
+    y: number;
+  };
+  configuration?:
+    | TaskConfiguration["Discord"]["postMessage"]
+    | TaskConfiguration["GoogleDrive"]["listenFilesAdded"];
 };
 
 export const tasks = pgTable("tasks", {
@@ -378,10 +388,7 @@ export const tasks = pgTable("tasks", {
       onDelete: "restrict",
       onUpdate: "cascade",
     }),
-  taskDetails: jsonb("task_details").$type<
-    | TaskTemplates["Discord"]["postMessage"]
-    | TaskTemplates["GoogleDrive"]["listenFilesAdded"]
-  >(),
+  taskDetails: jsonb("task_details").$type<TaskDetails>(),
   createdAt: timestamp("created_at", {
     precision: 0,
     mode: "date",
@@ -427,10 +434,12 @@ export const taskDependencies = pgTable(
     taskId: uuid("task_id")
       .notNull()
       .references(() => tasks.id, { onDelete: "cascade", onUpdate: "cascade" }),
-    dependsOnTaskId: uuid("depends_on_task_id").references(() => tasks.id, {
-      onDelete: "cascade",
-      onUpdate: "cascade",
-    }),
+    dependsOnTaskId: uuid("depends_on_task_id")
+      .notNull()
+      .references(() => tasks.id, {
+        onDelete: "cascade",
+        onUpdate: "cascade",
+      }),
     createdAt: timestamp("created_at", {
       precision: 0,
       mode: "date",

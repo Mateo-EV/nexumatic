@@ -1,7 +1,7 @@
 "use client";
 
 import { Icons } from "@/components/Icons";
-import { Button } from "@/components/ui/button";
+import { Button, SubmitButton } from "@/components/ui/button";
 import {
   Card,
   CardDescription,
@@ -12,10 +12,35 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ServicesData } from "@/config/const";
 import { useWorkflow } from "@/providers/WorkflowProvider";
 import { type ServiceClient } from "@/server/db/schema";
+import { api } from "@/trpc/react";
 import { useEffect, useState } from "react";
 
 export const WorkflowManagementMenu = () => {
-  const { thereIsTrigger, editor } = useWorkflow();
+  const { thereIsTrigger, editor, workflow } = useWorkflow();
+
+  const { mutate: saveDataInWorkflow, isPending } =
+    api.manageWorkflow.saveDataInWorkflow.useMutation({
+      // onMutate: () => {},
+    });
+
+  const handleClick = () => {
+    saveDataInWorkflow({
+      workflowId: workflow.id,
+      tasks: editor.nodes.map(
+        ({ id: tempId, data: { id: serviceId }, position }) => ({
+          serviceId,
+          tempId,
+          details: {
+            position,
+          },
+        }),
+      ),
+      taskDependencies: editor.edges.map(({ source, target }) => ({
+        taskTempId: target,
+        taskDependencyTempId: source,
+      })),
+    });
+  };
 
   return (
     <>
@@ -26,9 +51,14 @@ export const WorkflowManagementMenu = () => {
         >
           Trigger
         </Button>
-        <Button variant="secondary" disabled={editor.nodes.length === 0}>
+        <SubmitButton
+          isSubmitting={isPending}
+          variant="secondary"
+          disabled={editor.nodes.length === 0}
+          onClick={handleClick}
+        >
           Save
-        </Button>
+        </SubmitButton>
       </div>
       <WorkflowManagementMenuTasks />
     </>

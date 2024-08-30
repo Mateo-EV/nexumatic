@@ -21,6 +21,7 @@ import ReactFlow, {
   type Edge as LibEdge,
   MiniMap,
   type NodeChange,
+  NodeResizer,
   Position,
   type ReactFlowInstance,
   useNodeId,
@@ -47,6 +48,7 @@ export const WorkflowEditor = () => {
     thereIsTrigger,
     setThereIsTrigger,
   } = useWorkflow();
+  console.log(editor.edges);
 
   const onEdgesChange = useCallback((changes: EdgeChange[]) => {
     //@ts-expect-error Doesn´t have effect
@@ -129,7 +131,7 @@ function TaskEditorNode({ data }: { data: ServiceClient }) {
   };
 
   return (
-    <>
+    <div className="animate-fade-in">
       {data.type === "action" && (
         <CustomHandle
           type="target"
@@ -163,10 +165,26 @@ function TaskEditorNode({ data }: { data: ServiceClient }) {
         ></div>
       </Card>
       <CustomHandle type="source" position={Position.Bottom} id="b" />
-    </>
+    </div>
   );
 }
 
 const CustomHandle = (props: HandleProps & { style?: React.CSSProperties }) => {
-  return <Handle className="!h-4 !w-4 !bg-primary" {...props} />;
+  const { editor } = useWorkflow();
+
+  return (
+    <Handle
+      className="!h-4 !w-4 !bg-primary"
+      {...props}
+      isValidConnection={(connection) => {
+        const targetFromHandleInState = editor.edges.find(
+          (edge) => edge.target === connection.target,
+        );
+
+        if (targetFromHandleInState) return false;
+
+        return true;
+      }}
+    />
+  );
 };
