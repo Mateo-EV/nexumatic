@@ -300,6 +300,27 @@ export const servicesRelations = relations(services, ({ many }) => ({
   taskDependencies: many(taskDependencies),
 }));
 
+export type ConnectionConfiguration = {
+  Discord: {
+    postMessage: {
+      guildId: string;
+      guildName: string;
+    }[];
+  };
+
+  GoogleDrive: {
+    listenFilesAdded: {
+      channelId: string;
+      webhookUrl: string;
+      guild: string;
+    };
+  };
+};
+
+type ConnectionConfigurations =
+  | ConnectionConfiguration["Discord"]["postMessage"]
+  | ConnectionConfiguration["GoogleDrive"]["listenFilesAdded"];
+
 export const connections = pgTable("connections", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: uuid("user_id")
@@ -311,10 +332,7 @@ export const connections = pgTable("connections", {
       onDelete: "restrict",
       onUpdate: "cascade",
     }),
-  serviceProviderId: varchar("service_provider_id", { length: 80 }).notNull(),
-  accessToken: text("access_token"), // Token de autenticación para el servicio
-  refreshToken: text("refresh_token"),
-  expiresAt: timestamp("expires_at"), // Fecha de expiración del token
+  configuration: jsonb("configuration").$type<ConnectionConfigurations>(),
   createdAt: timestamp("created_at", {
     precision: 0,
     mode: "date",
@@ -332,7 +350,7 @@ export const connections = pgTable("connections", {
     .$onUpdate(() => new Date()),
 });
 
-export const connectionsRelations = relations(connections, ({ one }) => ({
+export const connectionsRelations = relations(connections, ({ one, many }) => ({
   user: one(users, {
     fields: [connections.userId],
     references: [users.id],
@@ -341,27 +359,10 @@ export const connectionsRelations = relations(connections, ({ one }) => ({
     fields: [connections.serviceId],
     references: [services.id],
   }),
+  tasks: many(tasks),
 }));
 
 export type Connection = InferSelectModel<typeof connections>;
-
-type TaskConfiguration = {
-  Discord: {
-    postMessage: {
-      channelId: string;
-      webhookUrl: string;
-      guild: string;
-    };
-  };
-
-  GoogleDrive: {
-    listenFilesAdded: {
-      channelId: string;
-      webhookUrl: string;
-      guild: string;
-    };
-  };
-};
 
 export type TaskDetails = {
   template?: WorkFlowTemplate | null;
@@ -369,9 +370,6 @@ export type TaskDetails = {
     x: number;
     y: number;
   };
-  configuration?:
-    | TaskConfiguration["Discord"]["postMessage"]
-    | TaskConfiguration["GoogleDrive"]["listenFilesAdded"];
 };
 
 export const tasks = pgTable("tasks", {
@@ -388,7 +386,11 @@ export const tasks = pgTable("tasks", {
       onDelete: "restrict",
       onUpdate: "cascade",
     }),
-  taskDetails: jsonb("task_details").$type<TaskDetails>(),
+  connectionId: uuid("connection_id").references(() => connections.id, {
+    onDelete: "restrict",
+    onUpdate: "cascade",
+  }),
+  details: jsonb("details").$type<TaskDetails>(),
   createdAt: timestamp("created_at", {
     precision: 0,
     mode: "date",
@@ -416,6 +418,10 @@ export const tasksRelations = relations(tasks, ({ many, one }) => ({
   service: one(services, {
     fields: [tasks.serviceId],
     references: [services.id],
+  }),
+  connection: one(connections, {
+    fields: [tasks.connectionId],
+    references: [connections.id],
   }),
   taskLogs: many(taskLogs),
 }));

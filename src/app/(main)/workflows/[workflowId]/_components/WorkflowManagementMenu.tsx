@@ -13,14 +13,21 @@ import { ServicesData } from "@/config/const";
 import { useWorkflow } from "@/providers/WorkflowProvider";
 import { type ServiceClient } from "@/server/db/schema";
 import { api } from "@/trpc/react";
+import { CircleIcon, PlayIcon, SaveAllIcon } from "lucide-react";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 export const WorkflowManagementMenu = () => {
-  const { thereIsTrigger, editor, workflow } = useWorkflow();
+  const { thereIsTrigger, editor, workflow, createNewSavedPoint } =
+    useWorkflow();
 
   const { mutate: saveDataInWorkflow, isPending } =
     api.manageWorkflow.saveDataInWorkflow.useMutation({
       // onMutate: () => {},
+      onSuccess: () => {
+        createNewSavedPoint();
+        toast.success("Workflow saved successfully");
+      },
     });
 
   const handleClick = () => {
@@ -42,23 +49,49 @@ export const WorkflowManagementMenu = () => {
     });
   };
 
+  const submitButtonDisabled =
+    editor.nodes.length === 0 ||
+    editor.history[editor.history.length - 1]?.saved;
+
+  const canBeTriggered =
+    submitButtonDisabled &&
+    editor.nodes.some((node) => node.data.name === "Manual Trigger");
+
+  const { mutate: triggerWorkflow, isPending: isWorkflowTriggering } =
+    api.manageWorkflow.triggerWorkflow.useMutation();
+
   return (
     <>
-      <div className="flex w-full gap-2 border-b p-4 [&>button]:flex-1">
-        <Button
-          disabled={!thereIsTrigger}
-          className={thereIsTrigger ? "glow-on-hover" : undefined}
-        >
-          Trigger
-        </Button>
+      <div className="flex w-full gap-2 border-b p-4">
         <SubmitButton
           isSubmitting={isPending}
-          variant="secondary"
-          disabled={editor.nodes.length === 0}
+          disabled={submitButtonDisabled}
+          variant="outline"
           onClick={handleClick}
         >
-          Save
+          <SaveAllIcon className="size-4" />
         </SubmitButton>
+
+        {thereIsTrigger && (
+          <Button
+            className={
+              isWorkflowTriggering
+                ? undefined
+                : canBeTriggered
+                  ? "glow-on-hover"
+                  : undefined
+            }
+            onClick={() => triggerWorkflow(workflow.id)}
+            variant={isWorkflowTriggering ? "destructive" : "default"}
+            disabled={isWorkflowTriggering}
+          >
+            {isWorkflowTriggering ? (
+              <CircleIcon className="size-4 fill-current" />
+            ) : (
+              <PlayIcon className="size-4 fill-current" />
+            )}
+          </Button>
+        )}
       </div>
       <WorkflowManagementMenuTasks />
     </>

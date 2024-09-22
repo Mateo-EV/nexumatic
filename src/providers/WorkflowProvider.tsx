@@ -4,7 +4,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { type getAvailableServicesForUser } from "@/server/db/data";
 import { type ServiceClient, type WorkFlow } from "@/server/db/schema";
 import { api } from "@/trpc/react";
-import { createContext, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 import { type Edge as LibEdge, type Node as LibNode } from "reactflow";
 
 const WorkflowContext = createContext({});
@@ -22,6 +28,11 @@ export type Editor = {
   nodes: Node[];
   edges: Edge[];
   selectedNode?: Node;
+  history: {
+    nodes: Node[];
+    edges: Edge[];
+    saved?: boolean;
+  }[];
 };
 
 export type WorkflowContextProps = {
@@ -31,6 +42,8 @@ export type WorkflowContextProps = {
   setNodes: React.Dispatch<React.SetStateAction<Node[]>>;
   setEdges: React.Dispatch<React.SetStateAction<Edge[]>>;
   setSelectedNode: React.Dispatch<React.SetStateAction<Node>>;
+  saveToHistory: () => void;
+  createNewSavedPoint: () => void;
   thereIsTrigger: boolean;
   setThereIsTrigger: React.Dispatch<React.SetStateAction<boolean>>;
 };
@@ -46,9 +59,70 @@ export const WorkflowProvider = ({
   const [selectedNode, setSelectedNode] = useState<Node>();
 
   const [thereIsTrigger, setThereIsTrigger] = useState(false);
+  const [history, setHistory] = useState<Editor["history"]>([]);
+  const [redoStack, setRedoStack] = useState<Editor["history"]>([]);
 
   const { data: workflowData, isPending } =
     api.manageWorkflow.getDataFromWorkflow.useQuery(workflow.id);
+
+  const saveToHistory = useCallback(() => {
+    setHistory((prevHistory) => [
+      ...prevHistory,
+      { nodes: [...nodes], edges: [...edges] },
+    ]);
+  }, [nodes, edges]);
+
+  const createNewSavedPoint = useCallback(() => {
+    setHistory((prevHistory) => [
+      ...prevHistory.slice(0, -1).map(({ edges, nodes }) => ({ edges, nodes })),
+      { ...prevHistory[prevHistory.length - 1]!, saved: true },
+    ]);
+  }, []);
+
+  const undo = useCallback(() => {
+    if (history.length > 1) {
+      const lastState = history[history.length - 1]!;
+      const newActualState = history[history.length - 2]!;
+      setRedoStack((prevRedo) => [
+        ...prevRedo,
+        { ...lastState, nodes: [...nodes], edges: [...edges] },
+      ]);
+      setNodes(newActualState.nodes);
+      setEdges(newActualState.edges);
+      setHistory((prevHistory) => prevHistory.slice(0, -1));
+    }
+  }, [history, nodes, edges]);
+
+  const redo = useCallback(() => {
+    if (redoStack.length > 0) {
+      const nextState = redoStack[redoStack.length - 1]!;
+      setHistory((prevHistory) => [
+        ...prevHistory,
+        { ...nextState, nodes: [...nodes], edges: [...edges] },
+      ]);
+      setNodes(nextState.nodes);
+      setEdges(nextState.edges);
+      setRedoStack((prevRedo) => prevRedo.slice(0, -1));
+    }
+  }, [redoStack, nodes, edges]);
+
+  useEffect(() => {
+    let isExecuting = false;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.ctrlKey && !isExecuting) {
+        isExecuting = true;
+        if (event.key === "z") {
+          undo();
+        } else if (event.key === "y") {
+          redo();
+        }
+        isExecuting = false;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [undo, redo]);
 
   useEffect(() => {
     if (!workflowData) return;
@@ -56,7 +130,7 @@ export const WorkflowProvider = ({
     let thereIsTrigger = false;
 
     const nodes: Node[] = workflowData.tasks.map(
-      ({ id, serviceId, taskDetails }) => {
+      ({ id, serviceId, details }) => {
         const service = services.indexedById[serviceId]!;
 
         if (service.type === "trigger") {
@@ -67,8 +141,8 @@ export const WorkflowProvider = ({
           id,
           type: "Task",
           position: {
-            x: taskDetails?.position.x ?? 0,
-            y: taskDetails?.position.y ?? 0,
+            x: details?.position.x ?? 0,
+            y: details?.position.y ?? 0,
           },
           data: service,
         };
@@ -90,6 +164,7 @@ export const WorkflowProvider = ({
     const timeOut = setTimeout(() => {
       setNodes(nodes);
       setEdges(edges);
+      setHistory([{ nodes: [...nodes], edges: [...edges], saved: true }]);
     }, 300);
 
     return () => {
@@ -115,10 +190,12 @@ export const WorkflowProvider = ({
         {
           workflow,
           services,
-          editor: { nodes, edges, selectedNode },
+          editor: { nodes, edges, selectedNode, history },
           setNodes,
           setEdges,
           setSelectedNode,
+          saveToHistory,
+          createNewSavedPoint,
           thereIsTrigger,
           setThereIsTrigger,
         } as WorkflowContextProps

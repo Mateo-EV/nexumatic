@@ -1,8 +1,10 @@
-import "server-only";
-import { taskDependencies, tasks, type WorkFlow } from "../db/schema";
-import { db } from "../db";
-import { and, eq, isNull } from "drizzle-orm";
 import { type workflowTasksSchemaType } from "@/lib/validators";
+import { and, eq } from "drizzle-orm";
+import { type Session } from "next-auth";
+import "server-only";
+import { db } from "../db";
+import { connections, services, tasks, type WorkFlow } from "../db/schema";
+import { ExternalServices } from "./External";
 
 const taskSelect = {
   id: tasks.id,
@@ -10,24 +12,29 @@ const taskSelect = {
   updatedAt: tasks.updatedAt,
   serviceId: tasks.serviceId,
   workflowId: tasks.workflowId,
-  taskDetails: tasks.taskDetails,
+  details: tasks.details,
 };
 
 export class WorkflowService {
-  workflow: WorkFlow;
+  private workflow: WorkFlow;
+  private session: Session = null!;
 
   constructor(workflow: WorkFlow) {
     this.workflow = workflow;
+  }
+
+  public setSession(session: Session) {
+    this.session = session;
   }
 
   private async getInitialTask() {
     const [task] = await db
       .select(taskSelect)
       .from(tasks)
-      .leftJoin(taskDependencies, eq(taskDependencies.taskId, tasks.id))
+      .leftJoin(services, eq(services.id, tasks.serviceId))
       .where(
         and(
-          isNull(taskDependencies.dependsOnTaskId),
+          eq(services.type, "trigger"),
           eq(tasks.workflowId, this.workflow.id),
         ),
       );
@@ -36,21 +43,36 @@ export class WorkflowService {
   }
 
   private async getTasksWithDependencies() {
-    return await db
-      .select({ ...taskSelect, dependencies: taskDependencies.dependsOnTaskId })
-      .from(tasks)
-      .leftJoin(taskDependencies, eq(taskDependencies.taskId, tasks.id))
-      .where(eq(tasks.workflowId, this.workflow.id));
-  }
+    const tasksWithDependencies = await db.query.tasks.findMany({
+      where: eq(tasks.workflowId, this.workflow.id),
+      with: {
+        dependents: {
+          columns: { taskId: true },
+        },
+        service: {
+          columns: { name: true, method: true, type: true },
+          with: {
+            connections: {
+              where: eq(connections.userId, this.session.user.id),
+              limit: 1,
+            },
+          },
+        },
+      },
+    });
 
-  // private async getTasksIndexedById(tasksWithDependencies: Awaited<ReturnType<typeof this.getTasksWithDependencies>>) {
-  //   const tasks = tasksWithDependencies.reduce((acc, task) => {
-  //     acc[task.id] = {
-  //       ...task,
-  //       dependencies:
-  //     }
-  //   }, {})
-  // }
+    console.log(tasksWithDependencies);
+
+    const isThereLackOfConnections = tasksWithDependencies
+      .filter((task) => task.service.type !== "trigger")
+      .some((task) => task.service.connections.length === 0);
+
+    if (isThereLackOfConnections) {
+      throw new WorkFlowServiceError("There is a lack of connections");
+    }
+
+    return tasksWithDependencies;
+  }
 
   private async getWorkflowData() {
     const initialTask = await this.getInitialTask();
@@ -62,11 +84,65 @@ export class WorkflowService {
 
     const tasksWithDependencies = await this.getTasksWithDependencies();
 
-    console.log(tasksWithDependencies);
+    const tasks = tasksWithDependencies.reduce<
+      Record<string, (typeof tasksWithDependencies)[number]>
+    >((acc, curr) => {
+      acc[curr.id] = curr;
+      return acc;
+    }, {});
+
+    return { initialTrigger: initialTask, tasks };
   }
 
+  private executeTask = async (
+    task: Awaited<ReturnType<typeof this.getTasksWithDependencies>>[number],
+  ) => {
+    try {
+      const service = task.service;
+      const serviceExternal = ExternalServices[service.name];
+
+      const methodToExecute = serviceExternal[service.method as never] as (
+        t: (typeof task.service.connections)[number],
+      ) => Promise<void>;
+
+      await methodToExecute(task.service.connections[0]!);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
   public async executeWorkflow() {
-    await this.getWorkflowData();
+    const { initialTrigger, tasks } = await this.getWorkflowData();
+
+    console.log("Iniciando Flujo de trabajo completado.");
+
+    const completedTasks = new Set<string>([initialTrigger.id]);
+
+    const inititalTask = tasks[initialTrigger.id]!;
+
+    const executeCurrentTask = this.executeTask;
+
+    async function continueTask(task = inititalTask) {
+      if (!task.dependents) return;
+
+      await Promise.all(
+        task.dependents.map(async ({ taskId: currentTaskId }) => {
+          if (completedTasks.has(currentTaskId)) return;
+
+          const currentTask = tasks[currentTaskId]!;
+
+          await executeCurrentTask(currentTask);
+
+          completedTasks.add(currentTaskId);
+
+          await continueTask(currentTask);
+        }),
+      );
+    }
+
+    await continueTask();
+
+    console.log("Flujo de trabajo completado.");
   }
 
   public static validateDependencies(
@@ -119,6 +195,10 @@ export class WorkflowService {
 
     return true;
   }
+
+  // public async workflowIsReadyToRun() {
+
+  // }
 }
 
 export class WorkFlowServiceError extends Error {

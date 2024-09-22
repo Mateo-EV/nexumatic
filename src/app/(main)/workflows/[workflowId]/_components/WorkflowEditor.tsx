@@ -6,7 +6,7 @@ import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { ServicesData } from "@/config/const";
 import { cn } from "@/lib/utils";
 import { type Node, useWorkflow } from "@/providers/WorkflowProvider";
-import { ServiceClient } from "@/server/db/schema";
+import { type ServiceClient } from "@/server/db/schema";
 import { useCallback, useMemo, useState } from "react";
 import ReactFlow, {
   addEdge,
@@ -21,7 +21,6 @@ import ReactFlow, {
   type Edge as LibEdge,
   MiniMap,
   type NodeChange,
-  NodeResizer,
   Position,
   type ReactFlowInstance,
   useNodeId,
@@ -43,55 +42,75 @@ export const WorkflowEditor = () => {
     setNodes,
     setEdges,
     setSelectedNode,
+    saveToHistory,
     editor,
     services,
     thereIsTrigger,
     setThereIsTrigger,
   } = useWorkflow();
-  console.log(editor.edges);
 
-  const onEdgesChange = useCallback((changes: EdgeChange[]) => {
-    //@ts-expect-error Doesn´t have effect
-    setEdges((prev) => applyNodeChanges(changes, prev));
+  const onEdgesChange = useCallback(
+    (changes: EdgeChange[]) => {
+      //@ts-expect-error Doesn´t have effect
+      setEdges((prev) => applyNodeChanges(changes, prev));
+      saveToHistory();
+    },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    [saveToHistory],
+  );
 
   const onNodesChange = useCallback((changes: NodeChange[]) => {
-    setNodes((prev) => applyNodeChanges(changes, prev));
+    setNodes((prev) => {
+      const nodes = applyNodeChanges(changes, prev);
+      setThereIsTrigger(nodes.some((node) => node.data.type === "trigger"));
+      return nodes;
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const onConnect = useCallback(
-    (edge: LibEdge | Connection) => setEdges((eds) => addEdge(edge, eds)),
+    (edge: LibEdge | Connection) => {
+      setEdges((eds) => addEdge(edge, eds));
+      saveToHistory();
+    },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
+    [saveToHistory],
   );
 
-  const onDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    if (!reactFlowInstance) return;
-    const serviceId = e.dataTransfer.getData("application/reactflow");
-    const service = services.indexedById[serviceId]!;
+  const onDrop = useCallback(
+    (e: React.DragEvent<HTMLDivElement>) => {
+      if (!reactFlowInstance) return;
+      const serviceId = e.dataTransfer.getData("application/reactflow");
+      const service = services.indexedById[serviceId]!;
 
-    if (service.type === "trigger" && thereIsTrigger) {
-      toast.error("There cannot be more than one trigger in a workflow");
-      return;
-    }
+      if (service.type === "trigger" && thereIsTrigger) {
+        toast.error("There cannot be more than one trigger in a workflow");
+        return;
+      }
 
-    const position = reactFlowInstance.screenToFlowPosition({
-      x: e.clientX,
-      y: e.clientY,
-    });
+      const position = reactFlowInstance.screenToFlowPosition({
+        x: e.clientX,
+        y: e.clientY,
+      });
 
-    const newNode = {
-      id: crypto.randomUUID(),
-      position,
-      type: "Task",
-      data: service,
-    } satisfies Node;
+      const newNode = {
+        id: crypto.randomUUID(),
+        position,
+        type: "Task",
+        data: service,
+      } satisfies Node;
 
-    setNodes((prev) => [...prev, newNode]);
-    setThereIsTrigger(true);
-  };
+      setNodes((prev) => [...prev, newNode]);
+      setThereIsTrigger(service.type === "trigger");
+      saveToHistory();
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [reactFlowInstance, saveToHistory, services.indexedById, thereIsTrigger],
+  );
+
+  const onNodeDragStop = useCallback(() => {
+    saveToHistory();
+  }, [saveToHistory]);
 
   return (
     <div className="flex h-full items-center justify-center">
@@ -107,6 +126,7 @@ export const WorkflowEditor = () => {
         nodeTypes={nodeTypes}
         onInit={setReactFlowInstance}
         proOptions={{ hideAttribution: true }}
+        onNodeDragStop={onNodeDragStop}
       >
         <Controls position="top-left" />
         <MiniMap
@@ -157,7 +177,7 @@ function TaskEditorNode({ data }: { data: ServiceClient }) {
           {data.name}
         </Badge>
         <div
-          className={cn("absolute left-3 top-4 h-2 w-2 rounded-full", {
+          className={cn("absolute left-3 top-4 size-2 rounded-full", {
             "bg-green-500": rand < 0.6,
             "bg-orange-500": rand >= 0.6 && rand < 0.8,
             "bg-red-500": rand >= 0.8,

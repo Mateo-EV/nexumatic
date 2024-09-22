@@ -1,10 +1,10 @@
-import { getSession } from "@/server/session";
-import { redirect } from "next/navigation";
-import { Navbar } from "./_components/Navbar";
-import { TRPCReactProvider } from "@/trpc/react";
-import { AuthProvider } from "@/providers/AuthProvider";
 import { Toaster } from "@/components/ui/sonner";
+import { AuthProvider } from "@/providers/AuthProvider";
+import { getSession } from "@/server/session";
+import { TRPCReactProvider } from "@/trpc/react";
+import { redirect } from "next/navigation";
 import "reactflow/dist/style.css";
+import { Navbar } from "./_components/Navbar";
 
 export default async function MainLayout({
   children,

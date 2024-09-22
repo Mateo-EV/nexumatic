@@ -1,16 +1,15 @@
-import { MAX_TASKS, workflowTasksSchema } from "@/lib/validators";
+import { workflowTasksSchema } from "@/lib/validators";
 import {
-  type Service,
   services,
   taskDependencies,
   tasks,
   workflows,
 } from "@/server/db/schema";
+import { WorkflowService } from "@/server/services/WorkflowService";
 import { TRPCError } from "@trpc/server";
 import { and, eq, inArray } from "drizzle-orm";
-import { createTRPCRouter, protectedProcedure } from "../trpc";
-import { WorkflowService } from "@/server/services/WorkflowService";
 import { string } from "zod";
+import { createTRPCRouter, protectedProcedure } from "../trpc";
 
 export const manageWorkflowRouter = createTRPCRouter({
   saveDataInWorkflow: protectedProcedure
@@ -32,110 +31,91 @@ export const manageWorkflowRouter = createTRPCRouter({
           columns: {
             id: true,
           },
-          with: {
-            tasks: true,
-          },
         });
 
         if (!workflow) throw new TRPCError({ code: "UNAUTHORIZED" });
 
-        const existingServicesIds = workflow.tasks.map(
-          (task) => task.serviceId,
-        );
-
-        const tasksFromClientSliced = tasksFromClient.slice(
-          0,
-          MAX_TASKS - workflow.tasks.length,
-        );
-        const taskDependenciesClientSliced = taskDependenciesFromClient.slice(
-          0,
-          MAX_TASKS - workflow.tasks.length - 1,
-        );
-
-        const allServiceIds = [
-          ...existingServicesIds,
-          ...tasksFromClientSliced.map((task) => task.serviceId),
-        ];
-        const servicesFromWorkflow = await ctx.db.query.services.findMany({
-          columns: {
-            id: true,
-            type: true,
-          },
-          where: inArray(services.id, allServiceIds),
+        const tasksTriggers = await ctx.db.query.services.findMany({
+          columns: { id: true, name: true, method: true },
+          where: and(
+            eq(services.type, "trigger"),
+            inArray(
+              services.id,
+              tasksFromClient.map((data) => data.serviceId),
+            ),
+          ),
         });
 
-        const serviceTypeMap = servicesFromWorkflow.reduce(
-          (acc, service) => {
-            acc[service.id] = service.type;
-            return acc;
-          },
-          {} as Record<string, Service["type"]>,
-        );
-
-        const existingTrigger = workflow.tasks.find(
-          (task) => serviceTypeMap[task.serviceId] === "trigger",
-        );
-
-        if (existingTrigger) {
-          const newTriggers = tasksFromClientSliced.filter(
-            (task) => serviceTypeMap[task.serviceId],
-          );
-
-          if (newTriggers.length > 0) {
-            throw new TRPCError({ code: "BAD_REQUEST" });
-          }
-        } else {
-          const newTriggers = tasksFromClientSliced.filter(
-            (task) => serviceTypeMap[task.serviceId] === "trigger",
-          );
-          if (newTriggers.length !== 1) {
-            throw new TRPCError({ code: "BAD_REQUEST" });
-          }
-        }
-
-        if (
-          !WorkflowService.validateDependencies(taskDependenciesClientSliced)
-        ) {
+        if (tasksTriggers.length > 1)
           throw new TRPCError({ code: "BAD_REQUEST" });
+
+        if (tasksTriggers[0]) {
+          const tasksFromClientIndexed = tasksFromClient.reduce(
+            (acc, curr) => {
+              acc[curr.tempId] = curr;
+              return acc;
+            },
+            {} as Record<string, (typeof tasksFromClient)[number]>,
+          );
+
+          const triggerDependsOnAction = taskDependenciesFromClient.some(
+            (dependency) =>
+              tasksFromClientIndexed[dependency.taskTempId]!.serviceId ===
+              tasksTriggers[0]?.id,
+          );
+
+          if (triggerDependsOnAction)
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+            });
         }
 
-        const savedTasks = await ctx.db
-          .insert(tasks)
-          .values(
-            tasksFromClientSliced.map(
-              ({ serviceId, details: { position } }) => ({
+        if (!WorkflowService.validateDependencies(taskDependenciesFromClient)) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Invalid dependencies",
+          });
+        }
+
+        return ctx.db.transaction(async (tx) => {
+          await tx.delete(tasks).where(eq(tasks.workflowId, workflowId));
+
+          const savedTasks = await tx
+            .insert(tasks)
+            .values(
+              tasksFromClient.map(({ serviceId, details: { position } }) => ({
                 workflowId,
                 serviceId,
-                taskDetails: {
+                details: {
                   position,
                 },
+              })),
+            )
+            .returning();
+
+          const saveTasksIds = tasksFromClient.reduce(
+            (acc, curr, index) => {
+              acc[curr.tempId] = savedTasks[index]!.id;
+              return acc;
+            },
+            {} as Record<string, string>,
+          );
+
+          await tx.insert(taskDependencies).values(
+            taskDependenciesFromClient.map(
+              ({ taskDependencyTempId, taskTempId }) => ({
+                taskId: saveTasksIds[taskTempId]!,
+                workflowId,
+                dependsOnTaskId: saveTasksIds[taskDependencyTempId]!,
               }),
             ),
-          )
-          .returning();
+          );
 
-        const saveTasksIds = tasksFromClientSliced.reduce(
-          (acc, curr, index) => {
-            acc[curr.tempId] = savedTasks[index]!.id;
-            return acc;
-          },
-          {} as Record<string, string>,
-        );
-
-        await ctx.db.insert(taskDependencies).values(
-          taskDependenciesClientSliced.map(
-            ({ taskDependencyTempId, taskTempId }) => ({
-              taskId: saveTasksIds[taskTempId]!,
-              workflowId,
-              dependsOnTaskId: saveTasksIds[taskDependencyTempId]!,
-            }),
-          ),
-        );
-
-        return {
-          savedTasks,
-          saveTasksIds,
-        };
+          return {
+            savedTasks,
+            saveTasksIds,
+          };
+        });
       },
     ),
 
@@ -161,5 +141,29 @@ export const manageWorkflowRouter = createTRPCRouter({
       if (!workflow) throw new TRPCError({ code: "UNAUTHORIZED" });
 
       return workflow;
+    }),
+
+  triggerWorkflow: protectedProcedure
+    .input(string())
+    .mutation(async ({ ctx, input: workflowId }) => {
+      const [workflow] = await ctx.db
+        .select()
+        .from(workflows)
+        .where(
+          and(
+            eq(workflows.id, workflowId),
+            eq(workflows.userId, ctx.session.user.id),
+          ),
+        );
+
+      if (!workflow) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+      const workflowService = new WorkflowService(workflow);
+
+      workflowService.setSession(ctx.session);
+
+      await workflowService.executeWorkflow();
+
+      return;
     }),
 });
