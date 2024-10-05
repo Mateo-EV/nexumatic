@@ -41,7 +41,6 @@ export const WorkflowEditor = () => {
   const {
     setNodes,
     setEdges,
-    setSelectedNode,
     saveToHistory,
     editor,
     services,
@@ -150,6 +149,13 @@ function TaskEditorNode({ data }: { data: ServiceClient }) {
     description: string;
   };
 
+  const { editor, setSelectedNode } = useWorkflow();
+
+  const node = useMemo(
+    () => editor.nodes.find((n) => n.id === nodeId)!,
+    [editor.nodes, nodeId],
+  );
+
   return (
     <div className="animate-fade-in">
       {data.type === "action" && (
@@ -159,7 +165,13 @@ function TaskEditorNode({ data }: { data: ServiceClient }) {
           style={{ zIndex: "100" }}
         />
       )}
-      <Card className="relative max-w-[400px]">
+      <Card
+        className={`relative max-w-[400px] ${node.id === editor.selectedNode?.id ? "border border-solid border-primary" : ""}`}
+        onClick={(e) => {
+          e.preventDefault();
+          setSelectedNode(node);
+        }}
+      >
         <CardHeader className="flex flex-row items-center gap-4">
           <Icon className="size-[30px]" />
           <div>

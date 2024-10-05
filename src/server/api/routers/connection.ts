@@ -9,7 +9,6 @@ export const connectionRouter = createTRPCRouter({
       columns: {
         id: true,
         serviceId: true,
-        configuration: true,
       },
     });
 

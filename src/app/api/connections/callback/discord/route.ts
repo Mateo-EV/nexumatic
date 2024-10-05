@@ -4,9 +4,8 @@ import { object, string } from "zod";
 import axios from "axios";
 import { db } from "@/server/db";
 import { connections, services } from "@/server/db/schema";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { getSession } from "@/server/session";
-import { channel } from "diagnostics_channel";
 
 const discordSearchParamsSchema = object({
   code: string().min(1),
@@ -73,7 +72,7 @@ export async function GET(req: NextRequest) {
     });
 
     const {
-      data: { guild },
+      data: { access_token, expires_in, refresh_token },
     } = await axios.post<TokenDiscordResponse>(
       "https://discord.com/api/oauth2/token",
       data,
@@ -111,16 +110,23 @@ export async function GET(req: NextRequest) {
         },
       }))!;
 
-      await tsx.insert(connections).values({
-        serviceId,
-        userId: session.user.id,
-        configuration: [
-          {
-            guildId: guild.id,
-            guildName: guild.name,
+      await tsx
+        .insert(connections)
+        .values({
+          serviceId,
+          userId: session.user.id,
+          accessToken: access_token,
+          refreshToken: refresh_token,
+          expiresAt: new Date(new Date().getTime() + expires_in),
+        })
+        .onConflictDoUpdate({
+          target: [connections.userId, connections.serviceId],
+          set: {
+            accessToken: sql.raw(`excluded.${connections.accessToken.name}`),
+            refreshToken: sql.raw(`excluded.${connections.refreshToken.name}`),
+            expiresAt: sql.raw(`excluded.${connections.expiresAt.name}`),
           },
-        ],
-      });
+        });
     });
 
     return Response.redirect(`${env.NEXT_PUBLIC_BASE_URL}/connections`);

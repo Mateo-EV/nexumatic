@@ -1,24 +1,19 @@
 "use client";
 
 import { Icons } from "@/components/Icons";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LINKS_CONNECTIONS } from "@/config/const";
 import { cn } from "@/lib/utils";
 import { type ServiceClient } from "@/server/db/schema";
 import { api } from "@/trpc/react";
-import { EllipsisIcon } from "lucide-react";
-import { ConfigurationDetails } from "./ConnectionDetails";
 
 type ConnectionCardProps = {
   service: ServiceClient;
@@ -63,14 +58,7 @@ export const ConnectionCard = ({ service }: ConnectionCardProps) => {
         {isPending ? (
           <Skeleton className="h-10 w-32 rounded-md" />
         ) : connection ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger>
-              <Button size="icon" variant="ghost">
-                <EllipsisIcon className="size-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            {ConfigurationDetails[service.name](connection)}
-          </DropdownMenu>
+          <Badge variant="outline">Connected</Badge>
         ) : (
           <a
             href={LINKS_CONNECTIONS[service.name]}

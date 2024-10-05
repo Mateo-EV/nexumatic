@@ -17,13 +17,14 @@ import { type AdapterAccount } from "next-auth/adapters";
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: varchar("name", { length: 255 }),
-  email: varchar("email", { length: 255 }).notNull(),
+  email: varchar("email", { length: 255 }).unique().notNull(),
   emailVerified: timestamp("email_verified", {
     mode: "date",
     withTimezone: true,
     precision: 0,
   }).defaultNow(),
   image: varchar("image", { length: 255 }),
+  stripeCustomerId: varchar("stripe_customer_id", { length: 255 }),
   createdAt: timestamp("created_at", {
     precision: 0,
     mode: "date",
@@ -118,22 +119,7 @@ export const plans = pgTable("plans", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
   stripePriceId: varchar("stripe_price_id", { length: 255 }).unique().notNull(),
-  features: text("features").notNull(), // JSONB en PostgreSQL
-  createdAt: timestamp("created_at", {
-    precision: 0,
-    mode: "date",
-    withTimezone: true,
-  })
-    .notNull()
-    .defaultNow(),
-  updatedAt: timestamp("updated_at", {
-    precision: 0,
-    mode: "date",
-    withTimezone: true,
-  })
-    .notNull()
-    .defaultNow()
-    .$onUpdate(() => new Date()),
+  features: jsonb("features").notNull(),
 });
 
 export const plansRelations = relations(plans, ({ many }) => ({
@@ -168,21 +154,6 @@ export const subscriptions = pgTable("subscriptions", {
     .notNull(),
   currentPeriodStart: timestamp("current_period_start").notNull(),
   currentPeriodEnd: timestamp("current_period_end").notNull(),
-  createdAt: timestamp("created_at", {
-    precision: 0,
-    mode: "date",
-    withTimezone: true,
-  })
-    .notNull()
-    .defaultNow(),
-  updatedAt: timestamp("updated_at", {
-    precision: 0,
-    mode: "date",
-    withTimezone: true,
-  })
-    .notNull()
-    .defaultNow()
-    .$onUpdate(() => new Date()),
 });
 
 export const subscriptionsRelations = relations(subscriptions, ({ one }) => ({
@@ -199,8 +170,8 @@ export const subscriptionsRelations = relations(subscriptions, ({ one }) => ({
 export type Subscription = InferSelectModel<typeof subscriptions>;
 
 export type WorkFlowTemplate = {
-  content: "";
-  file: "";
+  content?: string;
+  files?: string[];
 };
 
 export const workflows = pgTable("workflows", {
@@ -271,19 +242,6 @@ export const services = pgTable(
       .$type<keyof ServicesMethods>(),
     type: varchar("type", { length: 50 }).notNull().$type<ServicesTypes>(),
     method: varchar("method", { length: 50 }).notNull().$type<ServiceMethods>(),
-    createdAt: timestamp("created_at", {
-      precision: 0,
-      mode: "date",
-      withTimezone: true,
-    }).defaultNow(),
-    updatedAt: timestamp("updated_at", {
-      precision: 0,
-      mode: "date",
-      withTimezone: true,
-    })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
   },
   (table) => ({
     unq: unique().on(table.name, table.method),
@@ -300,57 +258,49 @@ export const servicesRelations = relations(services, ({ many }) => ({
   taskDependencies: many(taskDependencies),
 }));
 
-export type ConnectionConfiguration = {
-  Discord: {
-    postMessage: {
-      guildId: string;
-      guildName: string;
-    }[];
-  };
+// type ConnectionConfigurations =
+//   | ConnectionConfiguration["Discord"]["postMessage"]
+//   | ConnectionConfiguration["GoogleDrive"]["listenFilesAdded"];
 
-  GoogleDrive: {
-    listenFilesAdded: {
-      channelId: string;
-      webhookUrl: string;
-      guild: string;
-    };
-  };
-};
+export const connections = pgTable(
+  "connections",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade", onUpdate: "cascade" }),
+    serviceId: uuid("service_id")
+      .notNull()
+      .references(() => services.id, {
+        onDelete: "restrict",
+        onUpdate: "cascade",
+      }),
+    accessToken: text("access_token"),
+    refreshToken: text("refresh_token"),
+    expiresAt: timestamp("expires_at"),
+    // configuration: jsonb("configuration").$type<ConnectionConfigurations>(),
+    createdAt: timestamp("created_at", {
+      precision: 0,
+      mode: "date",
+      withTimezone: true,
+    })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", {
+      precision: 0,
+      mode: "date",
+      withTimezone: true,
+    })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => ({
+    unq: unique().on(t.userId, t.serviceId),
+  }),
+);
 
-type ConnectionConfigurations =
-  | ConnectionConfiguration["Discord"]["postMessage"]
-  | ConnectionConfiguration["GoogleDrive"]["listenFilesAdded"];
-
-export const connections = pgTable("connections", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  userId: uuid("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade", onUpdate: "cascade" }),
-  serviceId: uuid("service_id")
-    .notNull()
-    .references(() => services.id, {
-      onDelete: "restrict",
-      onUpdate: "cascade",
-    }),
-  configuration: jsonb("configuration").$type<ConnectionConfigurations>(),
-  createdAt: timestamp("created_at", {
-    precision: 0,
-    mode: "date",
-    withTimezone: true,
-  })
-    .notNull()
-    .defaultNow(),
-  updatedAt: timestamp("updated_at", {
-    precision: 0,
-    mode: "date",
-    withTimezone: true,
-  })
-    .notNull()
-    .defaultNow()
-    .$onUpdate(() => new Date()),
-});
-
-export const connectionsRelations = relations(connections, ({ one, many }) => ({
+export const connectionsRelations = relations(connections, ({ one }) => ({
   user: one(users, {
     fields: [connections.userId],
     references: [users.id],
@@ -359,7 +309,6 @@ export const connectionsRelations = relations(connections, ({ one, many }) => ({
     fields: [connections.serviceId],
     references: [services.id],
   }),
-  tasks: many(tasks),
 }));
 
 export type Connection = InferSelectModel<typeof connections>;
@@ -370,6 +319,7 @@ export type TaskDetails = {
     x: number;
     y: number;
   };
+  configuration?: Record<string, string>;
 };
 
 export const tasks = pgTable("tasks", {
@@ -386,18 +336,7 @@ export const tasks = pgTable("tasks", {
       onDelete: "restrict",
       onUpdate: "cascade",
     }),
-  connectionId: uuid("connection_id").references(() => connections.id, {
-    onDelete: "restrict",
-    onUpdate: "cascade",
-  }),
   details: jsonb("details").$type<TaskDetails>(),
-  createdAt: timestamp("created_at", {
-    precision: 0,
-    mode: "date",
-    withTimezone: true,
-  })
-    .notNull()
-    .defaultNow(),
   updatedAt: timestamp("updated_at", {
     precision: 0,
     mode: "date",
@@ -418,10 +357,6 @@ export const tasksRelations = relations(tasks, ({ many, one }) => ({
   service: one(services, {
     fields: [tasks.serviceId],
     references: [services.id],
-  }),
-  connection: one(connections, {
-    fields: [tasks.connectionId],
-    references: [connections.id],
   }),
   taskLogs: many(taskLogs),
 }));
@@ -446,11 +381,6 @@ export const taskDependencies = pgTable(
         onDelete: "cascade",
         onUpdate: "cascade",
       }),
-    createdAt: timestamp("created_at", {
-      precision: 0,
-      mode: "date",
-      withTimezone: true,
-    }).defaultNow(),
   },
   (table) => ({
     pk: primaryKey({ columns: [table.taskId, table.dependsOnTaskId] }),

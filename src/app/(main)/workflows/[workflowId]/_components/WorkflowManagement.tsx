@@ -5,6 +5,7 @@ import {
 } from "@/components/ui/resizable";
 import { WorkflowManagementMenu } from "./WorkflowManagementMenu";
 import { WorkflowEditor } from "./WorkflowEditor";
+import { WorkflowSettings } from "./WorkflowSettings";
 
 export const WorkflowManagement = () => {
   return (
@@ -21,7 +22,9 @@ export const WorkflowManagement = () => {
         <ResizablePanelGroup direction="vertical">
           <ResizablePanel>Logs</ResizablePanel>
           <ResizableHandle />
-          <ResizablePanel>Settings</ResizablePanel>
+          <ResizablePanel>
+            <WorkflowSettings />
+          </ResizablePanel>
         </ResizablePanelGroup>
       </ResizablePanel>
     </ResizablePanelGroup>
