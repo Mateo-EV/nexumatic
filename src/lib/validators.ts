@@ -13,11 +13,9 @@ export const workflowTasksSchema = object({
     object({
       serviceId: string().min(1),
       tempId: string().min(1),
-      details: object({
-        position: object({
-          x: number(),
-          y: number(),
-        }),
+      position: object({
+        x: number(),
+        y: number(),
       }),
     }),
   )

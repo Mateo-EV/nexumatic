@@ -2,7 +2,11 @@
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { type getAvailableServicesForUser } from "@/server/db/data";
-import { type ServiceClient, type WorkFlow } from "@/server/db/schema";
+import {
+  type Task,
+  type ServiceClient,
+  type WorkFlow,
+} from "@/server/db/schema";
 import { api } from "@/trpc/react";
 import {
   createContext,
@@ -20,7 +24,10 @@ type WorkflowProviderProps = {
   workflow: WorkFlow;
   services: Awaited<ReturnType<typeof getAvailableServicesForUser>>;
 };
-export type Node = LibNode<ServiceClient>;
+
+export type NodeData = Task & { service: ServiceClient };
+
+export type Node = LibNode<NodeData>;
 
 export type Edge = LibEdge;
 
@@ -129,25 +136,26 @@ export const WorkflowProvider = ({
 
     let thereIsTrigger = false;
 
-    const nodes: Node[] = workflowData.tasks.map(
-      ({ id, serviceId, details }) => {
-        const service = services.indexedById[serviceId]!;
+    const nodes: Node[] = workflowData.tasks.map((task) => {
+      const service = services.indexedById[task.serviceId]!;
 
-        if (service.type === "trigger") {
-          thereIsTrigger = true;
-        }
+      if (service.type === "trigger") {
+        thereIsTrigger = true;
+      }
 
-        return {
-          id,
-          type: "Task",
-          position: {
-            x: details?.position.x ?? 0,
-            y: details?.position.y ?? 0,
-          },
-          data: service,
-        };
-      },
-    );
+      return {
+        id: task.id,
+        type: "Task",
+        position: {
+          x: task.positionX ?? 0,
+          y: task.positionY ?? 0,
+        },
+        data: {
+          service,
+          ...task,
+        },
+      };
+    });
 
     const edges: Edge[] = workflowData.tasksDependencies.map(
       ({ taskId, dependsOnTaskId }) => ({

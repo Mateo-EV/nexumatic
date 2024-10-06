@@ -34,12 +34,10 @@ export const WorkflowManagementMenu = () => {
     saveDataInWorkflow({
       workflowId: workflow.id,
       tasks: editor.nodes.map(
-        ({ id: tempId, data: { id: serviceId }, position }) => ({
+        ({ id: tempId, data: { serviceId }, position }) => ({
           serviceId,
           tempId,
-          details: {
-            position,
-          },
+          position,
         }),
       ),
       taskDependencies: editor.edges.map(({ source, target }) => ({
@@ -55,7 +53,7 @@ export const WorkflowManagementMenu = () => {
 
   const canBeTriggered =
     submitButtonDisabled &&
-    editor.nodes.some((node) => node.data.name === "Manual Trigger");
+    editor.nodes.some((node) => node.data.service.name === "Manual Trigger");
 
   const { mutate: triggerWorkflow, isPending: isWorkflowTriggering } =
     api.manageWorkflow.triggerWorkflow.useMutation();

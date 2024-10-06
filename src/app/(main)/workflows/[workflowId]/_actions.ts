@@ -1,12 +1,13 @@
 "use server";
 
+import { createObject } from "@/lib/utils";
 import { db } from "@/server/db";
-import { workflows } from "@/server/db/schema";
+import { tasks, workflows } from "@/server/db/schema";
 import { getSession } from "@/server/session";
 import { utapi } from "@/server/uploadthing";
 import { and, eq } from "drizzle-orm";
-import { UploadFileResult } from "uploadthing/types";
-import { object, string, instanceof as instanceof_, array } from "zod";
+import { type UploadFileResult } from "uploadthing/types";
+import { array, instanceof as instanceof_, object, string } from "zod";
 
 const fileSchema = array(
   instanceof_(File)
@@ -18,33 +19,23 @@ const fileSchema = array(
     }),
 ).optional();
 
-const workflowTemplateSchema = object({
+const manulTriggerSettingsSchema = object({
   workflowId: string().min(1),
+  taskId: string().min(1),
   content: string()
     .min(1, "Content is required")
     .max(600, "Content too long")
     .optional(),
+  files: fileSchema,
 });
 
-export async function saveWorkflowTemplate(formData: FormData) {
+export async function saveManualTriggerTemplate(formData: FormData) {
   const session = await getSession();
 
   if (!session) throw new Error("Unauthorized");
 
-  const validatedContent = workflowTemplateSchema.safeParse(
-    Object.fromEntries(formData),
-  );
-
-  const validatedFiles = fileSchema.safeParse(formData.getAll("files"));
-
-  if (!validatedContent.success || !validatedFiles.success) {
-    throw new Error("Something went wrong");
-  }
-
-  const { files, workflowId, content } = {
-    ...validatedContent.data,
-    files: validatedFiles.data,
-  };
+  const { content, files, workflowId, taskId } =
+    manulTriggerSettingsSchema.parse(createObject(formData));
 
   const [workflow] = await db
     .select({ id: workflows.id })
@@ -65,11 +56,14 @@ export async function saveWorkflowTemplate(formData: FormData) {
   }
 
   await db
-    .update(workflows)
+    .update(tasks)
     .set({
-      template: { content, files: filesUploaded.map(({ data }) => data!.url) },
+      configuration: {
+        content,
+        files: filesUploaded.map(({ data }) => data!.url),
+      },
     })
-    .where(eq(workflows.id, workflowId));
+    .where(eq(tasks.id, taskId));
 
   return "Updated";
 }

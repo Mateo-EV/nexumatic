@@ -3,9 +3,8 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
-import { WorkflowManagementMenu } from "./WorkflowManagementMenu";
 import { WorkflowEditor } from "./WorkflowEditor";
-import { WorkflowSettings } from "./WorkflowSettings";
+import { WorkflowManagementMenu } from "./WorkflowManagementMenu";
 
 export const WorkflowManagement = () => {
   return (
@@ -18,15 +17,7 @@ export const WorkflowManagement = () => {
         <WorkflowEditor />
       </ResizablePanel>
       <ResizableHandle />
-      <ResizablePanel minSize={15}>
-        <ResizablePanelGroup direction="vertical">
-          <ResizablePanel>Logs</ResizablePanel>
-          <ResizableHandle />
-          <ResizablePanel>
-            <WorkflowSettings />
-          </ResizablePanel>
-        </ResizablePanelGroup>
-      </ResizablePanel>
+      <ResizablePanel minSize={15}>Logs</ResizablePanel>
     </ResizablePanelGroup>
   );
 };

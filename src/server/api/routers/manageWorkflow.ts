@@ -83,12 +83,11 @@ export const manageWorkflowRouter = createTRPCRouter({
           const savedTasks = await tx
             .insert(tasks)
             .values(
-              tasksFromClient.map(({ serviceId, details: { position } }) => ({
+              tasksFromClient.map(({ serviceId, position }) => ({
                 workflowId,
                 serviceId,
-                details: {
-                  position,
-                },
+                positionX: position.x,
+                positionY: position.y,
               })),
             )
             .returning();

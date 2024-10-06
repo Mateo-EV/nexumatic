@@ -1,8 +1,10 @@
 import { type InferSelectModel, relations } from "drizzle-orm";
 import {
+  decimal,
   index,
   integer,
   jsonb,
+  numeric,
   pgTable,
   primaryKey,
   serial,
@@ -169,11 +171,6 @@ export const subscriptionsRelations = relations(subscriptions, ({ one }) => ({
 
 export type Subscription = InferSelectModel<typeof subscriptions>;
 
-export type WorkFlowTemplate = {
-  content?: string;
-  files?: string[];
-};
-
 export const workflows = pgTable("workflows", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: uuid("user_id")
@@ -181,7 +178,6 @@ export const workflows = pgTable("workflows", {
     .references(() => users.id, { onDelete: "restrict", onUpdate: "cascade" }),
   name: varchar("name", { length: 255 }).notNull(),
   description: varchar("description", { length: 255 }),
-  template: jsonb("template").$type<WorkFlowTemplate>(),
   createdAt: timestamp("created_at", {
     precision: 0,
     mode: "date",
@@ -313,14 +309,20 @@ export const connectionsRelations = relations(connections, ({ one }) => ({
 
 export type Connection = InferSelectModel<typeof connections>;
 
-export type TaskDetails = {
-  template?: WorkFlowTemplate | null;
-  position: {
-    x: number;
-    y: number;
+export type TaskSpecificConfiguartions = {
+  Discord: { postMessage: null };
+  ["Google Drive"]: { listenFilesAdded: null };
+  ["Manual Trigger"]: {
+    clickButton: {
+      content?: string;
+      files?: string[];
+    };
   };
-  configuration?: Record<string, string>;
 };
+
+export type TaskConfiguration =
+  | TaskSpecificConfiguartions["Discord"]["postMessage"]
+  | TaskSpecificConfiguartions["Manual Trigger"]["clickButton"];
 
 export const tasks = pgTable("tasks", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -336,7 +338,15 @@ export const tasks = pgTable("tasks", {
       onDelete: "restrict",
       onUpdate: "cascade",
     }),
-  details: jsonb("details").$type<TaskDetails>(),
+  positionX: numeric("axis_position", {
+    precision: 10,
+    scale: 2,
+  }).$type<number>(),
+  positionY: numeric("ord_position", {
+    precision: 10,
+    scale: 2,
+  }).$type<number>(),
+  configuration: jsonb("configuration").$type<TaskConfiguration>(),
   updatedAt: timestamp("updated_at", {
     precision: 0,
     mode: "date",
