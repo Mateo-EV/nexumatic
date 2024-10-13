@@ -4,6 +4,8 @@
  */
 await import("./src/env.js");
 
+import MillionLint from "@million/lint";
+
 /** @type {import("next").NextConfig} */
 const config = {
   images: {
@@ -13,8 +15,13 @@ const config = {
         hostname: "lh3.googleusercontent.com",
         pathname: "/a/*",
       },
+      {
+        protocol: "https",
+        hostname: "utfs.io",
+        pathname: "/f/*",
+      },
     ],
   },
 };
 
-export default config;
+export default MillionLint.next({ rsc: true })(config);

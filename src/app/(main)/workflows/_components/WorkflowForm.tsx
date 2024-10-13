@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import useForm from "@/hooks/useForm";
-import { workflowSchema } from "@/lib/validators";
+import { workflowSchema } from "@/lib/validators/both";
 import { api } from "@/trpc/react";
 import { memo } from "react";
 import { toast } from "sonner";

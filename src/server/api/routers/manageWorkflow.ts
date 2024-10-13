@@ -1,7 +1,8 @@
-import { workflowTasksSchema } from "@/lib/validators";
+import { workflowTasksSchema } from "@/lib/validators/both";
 import {
   services,
   taskDependencies,
+  taskFiles,
   tasks,
   workflows,
 } from "@/server/db/schema";
@@ -127,7 +128,16 @@ export const manageWorkflowRouter = createTRPCRouter({
           eq(workflows.userId, ctx.session.user.id),
         ),
         with: {
-          tasks: true,
+          tasks: {
+            columns: {
+              id: true,
+              positionX: true,
+              positionY: true,
+              serviceId: true,
+              updatedAt: true,
+              workflowId: true,
+            },
+          },
           tasksDependencies: {
             columns: {
               dependsOnTaskId: true,
@@ -164,5 +174,27 @@ export const manageWorkflowRouter = createTRPCRouter({
       await workflowService.executeWorkflow();
 
       return;
+    }),
+
+  getTaskConfiguration: protectedProcedure
+    .input(string())
+    .query(async ({ ctx, input: taskId }) => {
+      const taskResults = await ctx.db
+        .select({ configuration: tasks.configuration, files: taskFiles })
+        .from(tasks)
+        .leftJoin(workflows, eq(workflows.id, tasks.workflowId))
+        .leftJoin(taskFiles, eq(taskFiles.taskId, tasks.id))
+        .where(
+          and(eq(tasks.id, taskId), eq(workflows.userId, ctx.session.user.id)),
+        );
+
+      if (!taskResults[0]) {
+        throw new TRPCError({ code: "NOT_FOUND" });
+      }
+
+      return {
+        ...taskResults[0].configuration,
+        files: taskResults.map((t) => t.files!),
+      };
     }),
 });

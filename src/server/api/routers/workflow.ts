@@ -1,4 +1,4 @@
-import { workflowSchema } from "@/lib/validators";
+import { workflowSchema } from "@/lib/validators/both";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import { workflows } from "@/server/db/schema";
 import { TRPCError } from "@trpc/server";

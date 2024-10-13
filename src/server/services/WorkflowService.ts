@@ -1,4 +1,4 @@
-import { type workflowTasksSchemaType } from "@/lib/validators";
+import { type workflowTasksSchemaType } from "@/lib/validators/both";
 import { and, eq } from "drizzle-orm";
 import { type Session } from "next-auth";
 import "server-only";

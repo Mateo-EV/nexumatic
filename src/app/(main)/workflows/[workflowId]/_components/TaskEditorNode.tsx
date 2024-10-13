@@ -57,7 +57,7 @@ export function TaskEditorNode({ data }: { data: NodeData }) {
             align="center"
             side="right"
             sideOffset={30}
-            className="max-w-72"
+            className="w-[18rem]"
           >
             <ServiceSettings data={data} />
           </DropdownMenuContent>

@@ -1,6 +1,5 @@
 import { type InferSelectModel, relations } from "drizzle-orm";
 import {
-  decimal,
   index,
   integer,
   jsonb,
@@ -254,10 +253,6 @@ export const servicesRelations = relations(services, ({ many }) => ({
   taskDependencies: many(taskDependencies),
 }));
 
-// type ConnectionConfigurations =
-//   | ConnectionConfiguration["Discord"]["postMessage"]
-//   | ConnectionConfiguration["GoogleDrive"]["listenFilesAdded"];
-
 export const connections = pgTable(
   "connections",
   {
@@ -309,20 +304,37 @@ export const connectionsRelations = relations(connections, ({ one }) => ({
 
 export type Connection = InferSelectModel<typeof connections>;
 
-export type TaskSpecificConfiguartions = {
-  Discord: { postMessage: null };
+type DiscordMessageData = {
+  content: string; // El mensaje en sí
+  tts?: boolean; // Si es un mensaje de texto a voz (opcional)
+  embeds?: Array<{
+    title: string;
+    description?: string;
+    url?: string;
+    color?: number;
+    fields?: Array<{
+      name: string;
+      value: string;
+      inline?: boolean;
+    }>;
+  }>;
+  channelId: string;
+  guildId: string;
+};
+
+export type TaskSpecificConfigurations = {
+  Discord: { postMessage: DiscordMessageData };
   ["Google Drive"]: { listenFilesAdded: null };
   ["Manual Trigger"]: {
     clickButton: {
       content?: string;
-      files?: string[];
     };
   };
 };
 
 export type TaskConfiguration =
-  | TaskSpecificConfiguartions["Discord"]["postMessage"]
-  | TaskSpecificConfiguartions["Manual Trigger"]["clickButton"];
+  | TaskSpecificConfigurations["Discord"]["postMessage"]
+  | TaskSpecificConfigurations["Manual Trigger"]["clickButton"];
 
 export const tasks = pgTable("tasks", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -369,6 +381,7 @@ export const tasksRelations = relations(tasks, ({ many, one }) => ({
     references: [services.id],
   }),
   taskLogs: many(taskLogs),
+  files: many(taskFiles),
 }));
 
 export type Task = InferSelectModel<typeof tasks>;
@@ -491,3 +504,24 @@ export const taskLogsRelations = relations(taskLogs, ({ one }) => ({
 }));
 
 export type TaskLog = InferSelectModel<typeof taskLogs>;
+
+export const taskFiles = pgTable("task_files", {
+  id: serial("id").primaryKey(),
+  taskId: uuid("task_id").references(() => tasks.id),
+  fileName: varchar("file_name", { length: 255 }).notNull(),
+  fileType: varchar("file_type", { length: 100 }).notNull(),
+  fileSize: integer("file_size").notNull(),
+  fileUrl: text("file_url").notNull(),
+  fileKey: varchar("file_key", { length: 100 }).notNull(),
+  uploadedAt: timestamp("uploaded_at", {
+    precision: 0,
+    mode: "date",
+    withTimezone: true,
+  }).defaultNow(),
+});
+
+export const taskFilesRelations = relations(taskFiles, ({ one }) => ({
+  task: one(tasks, { fields: [taskFiles.taskId], references: [tasks.id] }),
+}));
+
+export type TaskFile = InferSelectModel<typeof taskFiles>;

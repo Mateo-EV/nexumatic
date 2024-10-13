@@ -3,8 +3,8 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { type getAvailableServicesForUser } from "@/server/db/data";
 import {
-  type Task,
   type ServiceClient,
+  type Task,
   type WorkFlow,
 } from "@/server/db/schema";
 import { api } from "@/trpc/react";
@@ -25,7 +25,7 @@ type WorkflowProviderProps = {
   services: Awaited<ReturnType<typeof getAvailableServicesForUser>>;
 };
 
-export type NodeData = Task & { service: ServiceClient };
+export type NodeData = Omit<Task, "configuration"> & { service: ServiceClient };
 
 export type Node = LibNode<NodeData>;
 
