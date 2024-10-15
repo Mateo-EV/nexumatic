@@ -38,13 +38,7 @@ export function TaskEditorNode({ data }: { data: NodeData }) {
           <Icon className="size-[30px]" />
           <div>
             <CardTitle className="text-md">{data.service.name}</CardTitle>
-            {/* <div>
-              <p className="text-xs text-muted-foreground/50">
-                <b className="text-muted-foreground/80">ID: </b>
-                {nodeId}
-              </p> */}
             <p>{description}</p>
-            {/* </div> */}
           </div>
         </CardHeader>
         <DropdownMenu>

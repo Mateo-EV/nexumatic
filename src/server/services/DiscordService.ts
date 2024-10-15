@@ -1,5 +1,8 @@
 import { env } from "@/env";
 import axios from "axios";
+import { unstable_cache } from "next/cache";
+import { getSession } from "../session";
+import { Connection } from "../db/schema";
 
 interface Guild {
   id: string;
@@ -10,29 +13,47 @@ interface Guild {
   features: string[];
 }
 
+interface Channel {
+  id: string;
+  name: string;
+  type: number; // Tipo de canal (texto, voz, etc.)
+  guild_id: string;
+  position: number;
+}
+
 type GuildsResponse = Guild[];
+type ChannelsResponse = Channel[];
 
 export class DiscordService {
   private BOT_TOKEN = env.DISCORD_BOT_TOKEN;
-  private access_token: string;
+  private connection: Connection;
 
-  constructor(access_token: string) {
-    this.access_token = access_token;
+  constructor(connection: Connection) {
+    this.connection = connection;
   }
 
   public async getCommonGuilds() {
-    const [userGuilds, botGuilds] = await Promise.all([
-      this.getUserGuilds(),
-      this.getBotGuilds(),
-    ]);
+    const session = (await getSession())!;
+    return this.getCacheableCommonGuilds(session.user.id);
+  }
 
-    if (!userGuilds || !botGuilds) {
-      throw new Error("Something went wrong");
-    }
+  private async getCacheableCommonGuilds(userId: string) {
+    const functionCached = unstable_cache(async () => {
+      const [userGuilds, botGuilds] = await Promise.all([
+        this.getUserGuilds(),
+        this.getBotGuilds(),
+      ]);
 
-    const botGuildIds = new Set(botGuilds.map((guild) => guild.id));
+      if (!userGuilds || !botGuilds) {
+        throw new Error("Something went wrong");
+      }
 
-    return userGuilds.filter((guild) => botGuildIds.has(guild.id));
+      const botGuildIds = new Set(botGuilds.map((guild) => guild.id));
+
+      return userGuilds.filter((guild) => botGuildIds.has(guild.id));
+    }, ["common_guilds", userId]);
+
+    return functionCached();
   }
 
   private async getUserGuilds() {
@@ -41,15 +62,13 @@ export class DiscordService {
         "https://discord.com/api/v10/users/@me/guilds",
         {
           headers: {
-            Authorization: `Bearer ${this.access_token}`,
+            Authorization: `Bearer ${this.connection.accessToken!}`,
           },
         },
       );
 
       return data;
-    } catch (e) {
-      console.log(e);
-
+    } catch {
       return null;
     }
   }
@@ -66,9 +85,26 @@ export class DiscordService {
       );
 
       return data;
-    } catch (e) {
-      console.log(e);
+    } catch {
       return null;
     }
+  }
+
+  public async getChannelsByGuildId(guildId: string) {
+    const guilds = await this.getCommonGuilds();
+
+    if (!guilds.some(({ id }) => id === guildId))
+      throw new Error("This guild doesn't allow to you");
+
+    const { data } = await axios.get<ChannelsResponse>(
+      `https://discord.com/api/v10/guilds/${guildId}/channels`,
+      {
+        headers: {
+          Authorization: `Bot ${this.BOT_TOKEN}`,
+        },
+      },
+    );
+
+    return data;
   }
 }

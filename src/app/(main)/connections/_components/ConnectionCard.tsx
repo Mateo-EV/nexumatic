@@ -14,6 +14,7 @@ import { LINKS_CONNECTIONS } from "@/config/const";
 import { cn } from "@/lib/utils";
 import { type ServiceClient } from "@/server/db/schema";
 import { api } from "@/trpc/react";
+import { ConnectionButton } from "./ConnectionButton";
 
 type ConnectionCardProps = {
   service: ServiceClient;
@@ -60,13 +61,7 @@ export const ConnectionCard = ({ service }: ConnectionCardProps) => {
         ) : connection ? (
           <Badge variant="outline">Connected</Badge>
         ) : (
-          <a
-            href={LINKS_CONNECTIONS[service.name]}
-            target="_blank"
-            className={buttonVariants()}
-          >
-            Connect
-          </a>
+          <ConnectionButton serviceName={service.name} />
         )}
       </div>
     </Card>

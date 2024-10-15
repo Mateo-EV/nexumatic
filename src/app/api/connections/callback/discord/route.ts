@@ -24,30 +24,6 @@ type TokenDiscordResponse = {
   };
 };
 
-type DiscordChannel = {
-  id: string;
-  type: number;
-  last_message_id?: string | null;
-  flags: number;
-  guild_id: string;
-  name: string;
-  parent_id: string | null;
-  rate_limit_per_user?: number;
-  topic?: string | null;
-  position: number;
-  permission_overwrites: [];
-  nsfw: boolean;
-  icon_emoji?: {
-    id: string | null;
-    name: string;
-  } | null;
-  theme_color?: string | null;
-  bitrate?: number;
-  user_limit?: number;
-  rtc_region?: string | null;
-  voice_background_display?: string | null;
-};
-
 export async function GET(req: NextRequest) {
   try {
     const session = await getSession();
@@ -83,51 +59,33 @@ export async function GET(req: NextRequest) {
       },
     );
 
-    // const { data: channels } = await axios.get<DiscordChannel[]>(
-    //   `https://discord.com/api/v9/guilds/${guild.id}/channels`,
-    //   {
-    //     headers: { Authorization: `Bot ${env.DISCORD_BOT_TOKEN}` },
-    //   },
-    // );
+    const { id: serviceId } = (await db.query.services.findFirst({
+      where: and(
+        eq(services.name, "Discord"),
+        eq(services.method, "postMessage"),
+      ),
+      columns: {
+        id: true,
+      },
+    }))!;
 
-    // const { data: data2 } = await axios.get(
-    //   `https://discord.com/api/v9/users/@me/guilds/${webhook.guild_id}/channels`,
-    //   {
-    //     headers: {
-    //       Authorization: `Bearer ${access_token}`,
-    //     },
-    //   },
-    // );
-
-    await db.transaction(async (tsx) => {
-      const { id: serviceId } = (await tsx.query.services.findFirst({
-        where: and(
-          eq(services.name, "Discord"),
-          eq(services.method, "postMessage"),
-        ),
-        columns: {
-          id: true,
+    await db
+      .insert(connections)
+      .values({
+        serviceId,
+        userId: session.user.id,
+        accessToken: access_token,
+        refreshToken: refresh_token,
+        expiresAt: new Date(expires_in * 1000),
+      })
+      .onConflictDoUpdate({
+        target: [connections.userId, connections.serviceId],
+        set: {
+          accessToken: sql.raw(`excluded.${connections.accessToken.name}`),
+          refreshToken: sql.raw(`excluded.${connections.refreshToken.name}`),
+          expiresAt: sql.raw(`excluded.${connections.expiresAt.name}`),
         },
-      }))!;
-
-      await tsx
-        .insert(connections)
-        .values({
-          serviceId,
-          userId: session.user.id,
-          accessToken: access_token,
-          refreshToken: refresh_token,
-          expiresAt: new Date(new Date().getTime() + expires_in),
-        })
-        .onConflictDoUpdate({
-          target: [connections.userId, connections.serviceId],
-          set: {
-            accessToken: sql.raw(`excluded.${connections.accessToken.name}`),
-            refreshToken: sql.raw(`excluded.${connections.refreshToken.name}`),
-            expiresAt: sql.raw(`excluded.${connections.expiresAt.name}`),
-          },
-        });
-    });
+      });
 
     return Response.redirect(`${env.NEXT_PUBLIC_BASE_URL}/connections`);
   } catch (e) {
