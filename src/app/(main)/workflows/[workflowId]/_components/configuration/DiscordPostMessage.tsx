@@ -26,6 +26,8 @@ import { discordPostMessageConfigClientSchema } from "@/lib/validators/client";
 import { api } from "@/trpc/react";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { ConnectionButton } from "@/app/(main)/connections/_components/ConnectionButton";
+import { useTaskFileTemporalUploader } from "./utils/TaskFileTemporalUploader";
+import { Label } from "@/components/ui/label";
 
 type DiscordPostMessageProps = {
   task: NodeData & {
@@ -145,6 +147,11 @@ export const DiscordPostMessage = ({ task }: DiscordPostMessageProps) => {
     );
   };
 
+  const { Dropzone, FilesRendered } = useTaskFileTemporalUploader({
+    taskId: task.id,
+    savedFiles: task.configuration.files,
+  });
+
   return (
     <Form {...form}>
       <form className="space-y-4 p-2" onSubmit={onSubmit}>
@@ -181,6 +188,11 @@ export const DiscordPostMessage = ({ task }: DiscordPostMessageProps) => {
             </FormItem>
           )}
         />
+        <div className="space-y-2">
+          <Label>Files</Label>
+          <FilesRendered />
+          <Dropzone />
+        </div>
         <DiscordForm />
       </form>
     </Form>

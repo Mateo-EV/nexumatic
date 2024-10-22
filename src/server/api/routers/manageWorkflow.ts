@@ -194,7 +194,7 @@ export const manageWorkflowRouter = createTRPCRouter({
 
       return {
         ...taskResults[0].configuration,
-        files: taskResults.map((t) => t.files!),
+        files: taskResults.map((t) => t.files).filter((t) => t !== null),
       };
     }),
 });
