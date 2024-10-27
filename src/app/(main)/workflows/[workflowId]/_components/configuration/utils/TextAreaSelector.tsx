@@ -13,18 +13,39 @@ import {
 } from "@/components/ui/textarea";
 import { XIcon } from "lucide-react";
 import { forwardRef, useEffect, useRef, useState } from "react";
+import { useTaskParentsConfigurationStringSelector } from "./useTaskParentConfigurations";
 
 export const TextAreaSelector = forwardRef<
   HTMLDivElement,
-  AutosizeTextAreaProps & { onValueChange?: (v: string) => void }
->(({ onValueChange, ...props }, ref) => {
+  AutosizeTextAreaProps & {
+    onValueChange?: (v: string) => void;
+    taskId: string;
+  }
+>(({ onValueChange, taskId, defaultValue, ...props }, ref) => {
   const [isSelectorOpen, setIsSelectorOpen] = useState(false);
   const textAreaRef = useRef<AutosizeTextAreaRef>(null);
-  const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  const [selectedOption, setSelectedOption] = useState<{
+    value: string;
+    name: string;
+  } | null>(null);
+
+  const selectors = useTaskParentsConfigurationStringSelector(taskId);
+
+  useEffect(() => {
+    if (typeof defaultValue !== "string") return;
+
+    if (defaultValue.startsWith("{{") && defaultValue.endsWith("}}")) {
+      const selector =
+        selectors.find(({ value }) => value === defaultValue.slice(2, -2)) ??
+        null;
+
+      setSelectedOption(selector);
+    }
+  }, []);
 
   useEffect(() => {
     if (selectedOption) {
-      onValueChange?.(`{{${selectedOption}}}`);
+      onValueChange?.(`{{${selectedOption.value}}}`);
       textAreaRef.current!.textArea.value = "";
     } else {
       onValueChange?.("");
@@ -45,13 +66,14 @@ export const TextAreaSelector = forwardRef<
           onChange={(e) => {
             onValueChange?.(e.currentTarget.value);
           }}
+          disabled={Boolean(selectedOption)}
         />
         {selectedOption && (
           <div
             className="absolute left-2 top-2 flex cursor-pointer items-center border bg-secondary p-1 text-xs text-black"
             onClick={() => setSelectedOption(null)}
           >
-            <span>Manual Content</span>
+            <span>{selectedOption.name}</span>
             <XIcon className="ml-2 size-4" />
           </div>
         )}
@@ -67,18 +89,15 @@ export const TextAreaSelector = forwardRef<
           }}
         >
           <div className="flex flex-wrap gap-4 p-4">
-            <div
-              className="cursor-pointer border bg-secondary p-1 text-xs text-black"
-              onClick={() => setSelectedOption("Manual Content")}
-            >
-              Manual Content
-            </div>
-            <div className="cursor-pointer border bg-secondary p-1 text-xs text-black">
-              Logical
-            </div>
-            <div className="cursor-pointer border bg-secondary p-1 text-xs text-black">
-              Divider
-            </div>
+            {selectors.map(({ name, value }) => (
+              <div
+                key={value}
+                className="cursor-pointer border bg-secondary p-1 text-xs text-black"
+                onClick={() => setSelectedOption({ value, name })}
+              >
+                {name}
+              </div>
+            ))}
           </div>
         </DropdownMenuSubContent>
       </DropdownMenuPortal>

@@ -74,3 +74,45 @@ export const LINKS_CONNECTIONS = {
 
   Discord: `https://discord.com/oauth2/authorize?response_type=code&client_id=${env.NEXT_PUBLIC_DISCORD_CLIENT_ID}&redirect_uri=${encodeURIComponent(env.NEXT_PUBLIC_BASE_URL + "/api/connections/callback/discord")}&scope=guilds+bot&permissions=52224`,
 } as Record<keyof ServicesMethods, string>;
+
+export const ServicesStringSelector = {
+  "Google Drive": {
+    listenFilesAdded: [{ name: "", value: "" }],
+  },
+  Discord: {
+    postMessage: [],
+  },
+  Email: {
+    sendEmail: [{ name: "", value: "" }],
+  },
+  Facebook: {
+    postContent: [{ name: "", value: "" }],
+  },
+  Gmail: {
+    sendEmail: [{ name: "", value: "" }],
+  },
+  Instagram: {
+    postContent: [{ name: "", value: "" }],
+  },
+  Notion: {
+    addBlock: [{ name: "", value: "" }],
+  },
+  OneDrive: {
+    listenFilesAdded: [{ name: "", value: "" }],
+  },
+  Outlook: {
+    sendEmail: [{ name: "", value: "" }],
+  },
+  Slack: {
+    postMessage: [{ name: "", value: "" }],
+  },
+  Twitter: {
+    postTweet: [{ name: "", value: "" }],
+  },
+  Youtube: {
+    postContent: [{ name: "", value: "" }],
+  },
+  "Manual Trigger": {
+    clickButton: [{ name: "Manual content", value: "manual.content" }],
+  },
+} as ServicesMethods<{ value: string; name: string }[]>;

@@ -1,14 +1,18 @@
-import { manualTriggerClickButtonConfigServerSchema } from "@/lib/validators/server";
+import {
+  discordPostMessageConfigServerSchema,
+  manualTriggerClickButtonConfigServerSchema,
+} from "@/lib/validators/server";
 import { db } from "@/server/db";
 import {
   type Service,
   services,
   type TaskConfiguration,
+  taskFiles,
   tasks,
   workflows,
 } from "@/server/db/schema";
 import { TRPCError } from "@trpc/server";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { type Session } from "next-auth";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
 
@@ -57,7 +61,7 @@ async function updateTask(taskId: string, configuration: TaskConfiguration) {
 export const taskConfigurationRouter = createTRPCRouter({
   updateManualTriggerClickButtonConfiguration: protectedProcedure
     .input(manualTriggerClickButtonConfigServerSchema)
-    .mutation(async ({ ctx, input: { taskId, ...configuration } }) => {
+    .mutation(async ({ ctx, input: { taskId, configuration } }) => {
       const taskConfigCanBeUpdated = await taskCanBeUpdated({
         session: ctx.session,
         taskId,
@@ -67,6 +71,37 @@ export const taskConfigurationRouter = createTRPCRouter({
       if (!taskConfigCanBeUpdated) throw new TRPCError({ code: "FORBIDDEN" });
 
       await updateTask(taskId, configuration);
+
+      return configuration;
+    }),
+  updateDiscordPostMessageConfiguration: protectedProcedure
+    .input(discordPostMessageConfigServerSchema)
+    .mutation(async ({ ctx, input: { taskId, configuration } }) => {
+      const taskConfigCanBeUpdated = await taskCanBeUpdated({
+        session: ctx.session,
+        taskId,
+        service: { name: "Discord", method: "postMessage" },
+      });
+
+      if (!taskConfigCanBeUpdated) throw new TRPCError({ code: "FORBIDDEN" });
+
+      let embeds = undefined;
+
+      if (configuration.embeds && configuration.embeds.length > 0) {
+        const filesData = await ctx.db
+          .select({ url: taskFiles.fileUrl })
+          .from(taskFiles)
+          .where(
+            inArray(
+              taskFiles.id,
+              configuration.embeds.map((f) => f.fileId),
+            ),
+          );
+
+        embeds = filesData.map(({ url }) => ({ url }));
+      }
+
+      await updateTask(taskId, { ...configuration, embeds });
 
       return configuration;
     }),

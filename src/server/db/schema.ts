@@ -308,15 +308,15 @@ type DiscordMessageData = {
   content: string; // El mensaje en sí
   tts?: boolean; // Si es un mensaje de texto a voz (opcional)
   embeds?: Array<{
-    title: string;
-    description?: string;
+    // title: string;
+    // description?: string;
     url?: string;
-    color?: number;
-    fields?: Array<{
-      name: string;
-      value: string;
-      inline?: boolean;
-    }>;
+    // color?: number;
+    // fields?: Array<{
+    //   name: string;
+    //   value: string;
+    //   inline?: boolean;
+    // }>;
   }>;
   channelId: string;
   guildId: string;

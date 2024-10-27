@@ -1,4 +1,5 @@
-import { Button } from "@/components/ui/button";
+import { ConnectionButton } from "@/app/(main)/connections/_components/ConnectionButton";
+import { SubmitButton } from "@/components/ui/button";
 import {
   Form,
   FormControl,
@@ -7,14 +8,8 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import useForm from "@/hooks/useForm";
-import { type NodeData } from "@/providers/WorkflowProvider";
-import {
-  type TaskFile,
-  type TaskSpecificConfigurations,
-} from "@/server/db/schema";
-import { TextAreaSelector } from "./utils/TextAreaSelector";
-import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import {
   Select,
   SelectContent,
@@ -22,12 +17,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import useForm from "@/hooks/useForm";
 import { discordPostMessageConfigClientSchema } from "@/lib/validators/client";
+import { type NodeData } from "@/providers/WorkflowProvider";
+import {
+  type TaskFile,
+  type TaskSpecificConfigurations,
+} from "@/server/db/schema";
 import { api } from "@/trpc/react";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { ConnectionButton } from "@/app/(main)/connections/_components/ConnectionButton";
+import { useState } from "react";
+import { ParentFiles } from "./utils/ParentFiles";
 import { useTaskFileTemporalUploader } from "./utils/TaskFileTemporalUploader";
-import { Label } from "@/components/ui/label";
+import { TextAreaSelector } from "./utils/TextAreaSelector";
+import { useUpdateTaskConfig } from "./utils/useUpdateTaskConfig";
 
 type DiscordPostMessageProps = {
   task: NodeData & {
@@ -50,6 +53,8 @@ export const DiscordPostMessage = ({ task }: DiscordPostMessageProps) => {
     },
   });
 
+  const [extraFiles, setExtraFiles] = useState<number[]>([]);
+
   const { data: discordGuilds, isLoading: isLoadingDiscordGuilds } =
     api.serviceData.discordGuilds.useQuery(undefined, {
       retry: (count, error) => {
@@ -66,8 +71,27 @@ export const DiscordPostMessage = ({ task }: DiscordPostMessageProps) => {
       enabled: Boolean(discordGuilds) && guildIdChosen !== "",
     });
 
-  const onSubmit = form.handleSubmit(() => {
-    console.log("si");
+  const { updateConfiguration, isUpdatingConfiguration } = useUpdateTaskConfig(
+    task.id,
+    "updateDiscordPostMessageConfiguration",
+  );
+
+  const { Dropzone, FilesRendered, uploadFileToTask, isUploadingFileToTask } =
+    useTaskFileTemporalUploader({
+      taskId: task.id,
+      savedFiles: task.configuration.files,
+    });
+
+  const onSubmit = form.handleSubmit(({ channelId, content, guildId, tts }) => {
+    updateConfiguration({
+      channelId,
+      guildId,
+      content,
+      embeds: extraFiles.map((fileId) => ({ fileId })),
+      tts,
+    });
+
+    uploadFileToTask();
   });
 
   const DiscordForm = () => {
@@ -139,18 +163,18 @@ export const DiscordPostMessage = ({ task }: DiscordPostMessageProps) => {
                 )}
               />
 
-              <Button>Save</Button>
+              <SubmitButton
+                isSubmitting={isUpdatingConfiguration || isUploadingFileToTask}
+                type="submit"
+              >
+                Save
+              </SubmitButton>
             </>
           )
         )}
       </>
     );
   };
-
-  const { Dropzone, FilesRendered } = useTaskFileTemporalUploader({
-    taskId: task.id,
-    savedFiles: task.configuration.files,
-  });
 
   return (
     <Form {...form}>
@@ -163,8 +187,9 @@ export const DiscordPostMessage = ({ task }: DiscordPostMessageProps) => {
               <FormLabel>Message</FormLabel>
               <FormControl>
                 <TextAreaSelector
+                  taskId={task.id}
                   defaultValue={field.value}
-                  onChange={field.onChange}
+                  onValueChange={field.onChange}
                 />
               </FormControl>
               <FormMessage />
@@ -190,6 +215,11 @@ export const DiscordPostMessage = ({ task }: DiscordPostMessageProps) => {
         />
         <div className="space-y-2">
           <Label>Files</Label>
+          <ParentFiles
+            taskId={task.id}
+            setExtraFiles={setExtraFiles}
+            extraFiles={extraFiles}
+          />
           <FilesRendered />
           <Dropzone />
         </div>

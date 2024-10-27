@@ -198,7 +198,7 @@ export const FileRenderer = ({
           alt="user-image"
           width={100}
           height={100}
-          className="size-full"
+          className="size-full rounded-md"
           onLoadingComplete={() => setIsLoadingImage(false)}
         />
         {isLoadingImage && (
