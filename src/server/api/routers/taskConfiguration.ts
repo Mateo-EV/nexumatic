@@ -89,7 +89,11 @@ export const taskConfigurationRouter = createTRPCRouter({
 
       if (configuration.embeds && configuration.embeds.length > 0) {
         const filesData = await ctx.db
-          .select({ url: taskFiles.fileUrl })
+          .select({
+            url: taskFiles.fileUrl,
+            name: taskFiles.fileName,
+            type: taskFiles.fileType,
+          })
           .from(taskFiles)
           .where(
             inArray(
@@ -98,10 +102,20 @@ export const taskConfigurationRouter = createTRPCRouter({
             ),
           );
 
-        embeds = filesData.map(({ url }) => ({ image: { url } }));
+        embeds = filesData.map(({ url, name, type }) => {
+          if (type.startsWith("image")) {
+            return { image: { url } };
+          } else {
+            return { title: name, url, description: name };
+          }
+        });
       }
 
-      await updateTask(taskId, { ...configuration, embeds });
+      await updateTask(taskId, {
+        ...configuration,
+        embeds,
+        fileIds: configuration.embeds?.map((e) => e.fileId),
+      });
 
       return configuration;
     }),

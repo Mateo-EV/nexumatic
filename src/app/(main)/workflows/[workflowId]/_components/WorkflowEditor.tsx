@@ -100,7 +100,6 @@ export const WorkflowEditor = () => {
           serviceId: serviceId,
           updatedAt: new Date(),
           workflowId: workflow.id,
-          configuration: null,
         },
       } satisfies Node;
 

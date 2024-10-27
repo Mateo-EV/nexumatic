@@ -307,17 +307,21 @@ export type Connection = InferSelectModel<typeof connections>;
 type DiscordMessageData = {
   content: string; // El mensaje en sí
   tts?: boolean; // Si es un mensaje de texto a voz (opcional)
-  embeds?: Array<{
-    image: { url: string };
-    // color?: number;
-    // fields?: Array<{
-    //   name: string;
-    //   value: string;
-    //   inline?: boolean;
-    // }>;
-  }>;
+  embeds?: Array<
+    | {
+        image: { url: string };
+        // color?: number;
+        // fields?: Array<{
+        //   name: string;
+        //   value: string;
+        //   inline?: boolean;
+        // }>;
+      }
+    | { url: string; title: string; description: string }
+  >;
   channelId: string;
   guildId: string;
+  fileIds?: number[];
 };
 
 export type TaskSpecificConfigurations = {
@@ -505,7 +509,10 @@ export type TaskLog = InferSelectModel<typeof taskLogs>;
 
 export const taskFiles = pgTable("task_files", {
   id: serial("id").primaryKey(),
-  taskId: uuid("task_id").references(() => tasks.id),
+  taskId: uuid("task_id").references(() => tasks.id, {
+    onDelete: "restrict",
+    onUpdate: "cascade",
+  }),
   fileName: varchar("file_name", { length: 255 }).notNull(),
   fileType: varchar("file_type", { length: 100 }).notNull(),
   fileSize: integer("file_size").notNull(),

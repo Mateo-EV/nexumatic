@@ -45,13 +45,6 @@ const ParentFilesLoaded = ({
   extraFiles: number[];
   setExtraFiles: React.Dispatch<React.SetStateAction<number[]>>;
 }) => {
-  console.log(extraFiles);
-
-  useEffect(() => {
-    setExtraFiles(initialFiles.map(({ id }) => id));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   function omitFile(fileId: number) {
     setExtraFiles((prev) => prev.filter((f) => f !== fileId));
   }

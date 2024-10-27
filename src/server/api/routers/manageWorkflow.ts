@@ -1,16 +1,49 @@
 import { workflowTasksSchema } from "@/lib/validators/both";
 import {
   services,
+  type Task,
   taskDependencies,
+  type TaskDependency,
+  type TaskFile,
   taskFiles,
   tasks,
   workflows,
 } from "@/server/db/schema";
-import { WorkflowService } from "@/server/services/WorkflowService";
+import {
+  WorkflowService,
+  WorkFlowServiceError,
+} from "@/server/services/WorkflowService";
 import { TRPCError } from "@trpc/server";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, sql, type SQL } from "drizzle-orm";
 import { string } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
+import { db } from "@/server/db";
+import { utapi } from "@/server/uploadthing";
+
+function deleteManyTasks(tasksClient: (Task & { files: TaskFile[] })[]) {
+  if (tasksClient.length === 0) return;
+
+  return db.transaction(async (tx) => {
+    const { keys, tasksIds } = tasksClient.reduce<{
+      keys: string[];
+      tasksIds: string[];
+    }>(
+      (acc, curr) => {
+        const keys = curr.files.map((f) => f.fileKey);
+        const tasksIds = curr.id;
+
+        acc.keys.push(...keys);
+        acc.tasksIds.push(tasksIds);
+        return acc;
+      },
+      { keys: [], tasksIds: [] },
+    );
+
+    await utapi.deleteFiles(keys);
+
+    await tx.delete(tasks).where(inArray(tasks.id, tasksIds));
+  });
+}
 
 export const manageWorkflowRouter = createTRPCRouter({
   saveDataInWorkflow: protectedProcedure
@@ -50,15 +83,15 @@ export const manageWorkflowRouter = createTRPCRouter({
         if (tasksTriggers.length > 1)
           throw new TRPCError({ code: "BAD_REQUEST" });
 
-        if (tasksTriggers[0]) {
-          const tasksFromClientIndexed = tasksFromClient.reduce(
-            (acc, curr) => {
-              acc[curr.tempId] = curr;
-              return acc;
-            },
-            {} as Record<string, (typeof tasksFromClient)[number]>,
-          );
+        const tasksFromClientIndexed = tasksFromClient.reduce(
+          (acc, curr) => {
+            acc[curr.tempId] = curr;
+            return acc;
+          },
+          {} as Record<string, (typeof tasksFromClient)[number]>,
+        );
 
+        if (tasksTriggers[0]) {
           const triggerDependsOnAction = taskDependenciesFromClient.some(
             (dependency) =>
               tasksFromClientIndexed[dependency.taskTempId]!.serviceId ===
@@ -79,19 +112,94 @@ export const manageWorkflowRouter = createTRPCRouter({
         }
 
         return ctx.db.transaction(async (tx) => {
-          await tx.delete(tasks).where(eq(tasks.workflowId, workflowId));
+          await tx
+            .delete(taskDependencies)
+            .where(eq(taskDependencies.workflowId, workflowId));
 
-          const savedTasks = await tx
-            .insert(tasks)
-            .values(
-              tasksFromClient.map(({ serviceId, position }) => ({
-                workflowId,
-                serviceId,
-                positionX: position.x,
-                positionY: position.y,
-              })),
-            )
-            .returning();
+          const tasksInDB = await tx.query.tasks.findMany({
+            where: eq(tasks.workflowId, workflowId),
+            with: {
+              files: true,
+            },
+          });
+
+          const tasksMustBeDeleted = tasksInDB.filter(
+            (t) => !Boolean(tasksFromClientIndexed[t.id]),
+          );
+
+          await deleteManyTasks(tasksMustBeDeleted);
+
+          const tasksInDbIndexed = tasksInDB.reduce<
+            Record<string, (typeof tasksInDB)[number]>
+          >((acc, curr) => {
+            acc[curr.id] = curr;
+            return acc;
+          }, {});
+
+          const { existingTasks, nonExistingTasks } = tasksFromClient.reduce<{
+            existingTasks: typeof tasksFromClient;
+            nonExistingTasks: typeof tasksFromClient;
+          }>(
+            (acc, curr) => {
+              if (tasksInDbIndexed[curr.tempId]) {
+                acc.existingTasks.push(curr);
+              } else {
+                acc.nonExistingTasks.push(curr);
+              }
+
+              return acc;
+            },
+            { existingTasks: [], nonExistingTasks: [] },
+          );
+
+          let savedTasks: Task[] = [];
+
+          if (existingTasks.length > 0) {
+            const sqlPositionX: SQL[] = [];
+            const sqlPositionY: SQL[] = [];
+            const taskExistingIds: string[] = [];
+
+            sqlPositionX.push(sql`(case`);
+            sqlPositionY.push(sql`(case`);
+
+            for (const task of existingTasks) {
+              sqlPositionX.push(
+                sql`when ${tasks.id} = ${task.tempId} then ${task.position.x}::numeric`,
+              );
+              sqlPositionY.push(
+                sql`when ${tasks.id} = ${task.tempId} then ${task.position.y}::numeric`,
+              );
+              taskExistingIds.push(task.tempId);
+            }
+
+            sqlPositionX.push(sql`end)`);
+            sqlPositionY.push(sql`end)`);
+
+            const finalX = sql.join(sqlPositionX, sql.raw(" "));
+            const finalY = sql.join(sqlPositionY, sql.raw(" "));
+
+            savedTasks = await tx
+              .update(tasks)
+              .set({ positionX: finalX, positionY: finalY })
+              .where(inArray(tasks.id, taskExistingIds))
+              .returning();
+          }
+
+          if (nonExistingTasks.length > 0) {
+            savedTasks.push(
+              ...(await tx
+                .insert(tasks)
+                .values(
+                  nonExistingTasks.map(({ serviceId, position }) => ({
+                    workflowId,
+                    serviceId,
+                    positionX: position.x,
+                    positionY: position.y,
+                  })),
+                )
+                .returning()),
+            );
+          }
 
           const saveTasksIds = tasksFromClient.reduce(
             (acc, curr, index) => {
@@ -101,20 +209,24 @@ export const manageWorkflowRouter = createTRPCRouter({
             {} as Record<string, string>,
           );
 
-          await tx.insert(taskDependencies).values(
-            taskDependenciesFromClient.map(
-              ({ taskDependencyTempId, taskTempId }) => ({
-                taskId: saveTasksIds[taskTempId]!,
-                workflowId,
-                dependsOnTaskId: saveTasksIds[taskDependencyTempId]!,
-              }),
-            ),
-          );
+          let savedDependencies: TaskDependency[] = [];
 
-          return {
-            savedTasks,
-            saveTasksIds,
-          };
+          if (taskDependenciesFromClient.length > 0) {
+            savedDependencies = await tx
+              .insert(taskDependencies)
+              .values(
+                taskDependenciesFromClient.map(
+                  ({ taskDependencyTempId, taskTempId }) => ({
+                    taskId: saveTasksIds[taskTempId]!,
+                    workflowId,
+                    dependsOnTaskId: saveTasksIds[taskDependencyTempId]!,
+                  }),
+                ),
+              )
+              .returning();
+          }
+
+          return { savedTasks, savedDependencies };
         });
       },
     ),
@@ -171,7 +283,13 @@ export const manageWorkflowRouter = createTRPCRouter({
 
       workflowService.setSession(ctx.session);
 
-      await workflowService.executeWorkflow();
+      try {
+        await workflowService.executeWorkflow();
+      } catch (error) {
+        if (error instanceof WorkFlowServiceError) {
+          throw new TRPCError({ code: "CONFLICT", message: error.message });
+        }
+      }
 
       return;
     }),

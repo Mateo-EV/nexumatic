@@ -33,9 +33,23 @@ export const ExternalServices = {
       let embeds = configuration.embeds;
 
       if (embeds) {
-        embeds.push(...files.map((f) => ({ image: { url: f.fileUrl } })));
+        embeds.push(
+          ...files.map(({ fileUrl, fileName, fileType }) => {
+            if (fileType.startsWith("image")) {
+              return { image: { url: fileUrl } };
+            } else {
+              return { title: fileName, url: fileUrl, description: fileName };
+            }
+          }),
+        );
       } else {
-        embeds = files.map((f) => ({ image: { url: f.fileUrl } }));
+        embeds = files.map(({ fileUrl, fileName, fileType }) => {
+          if (fileType.startsWith("image")) {
+            return { image: { url: fileUrl } };
+          } else {
+            return { title: fileName, url: fileUrl, description: fileName };
+          }
+        });
       }
 
       try {

@@ -1,4 +1,4 @@
-import { api, RouterInputs } from "@/trpc/react";
+import { api, type RouterInputs } from "@/trpc/react";
 import { toast } from "sonner";
 
 export const useUpdateTaskConfig = (

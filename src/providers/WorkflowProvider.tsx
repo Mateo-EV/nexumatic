@@ -25,7 +25,9 @@ type WorkflowProviderProps = {
   services: Awaited<ReturnType<typeof getAvailableServicesForUser>>;
 };
 
-export type NodeData = Omit<Task, "configuration"> & { service: ServiceClient };
+export type NodeData = Omit<Task, "configuration"> & {
+  service: ServiceClient;
+};
 
 export type Node = LibNode<NodeData>;
 
@@ -172,7 +174,9 @@ export const WorkflowProvider = ({
     const timeOut = setTimeout(() => {
       setNodes(nodes);
       setEdges(edges);
-      setHistory([{ nodes: [...nodes], edges: [...edges], saved: true }]);
+      if (history.length === 0) {
+        setHistory([{ nodes: [...nodes], edges: [...edges], saved: true }]);
+      }
     }, 300);
 
     return () => {

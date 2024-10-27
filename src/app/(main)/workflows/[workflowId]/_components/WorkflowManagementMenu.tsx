@@ -8,6 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ServicesData } from "@/config/const";
 import { useWorkflow } from "@/providers/WorkflowProvider";
@@ -21,12 +22,31 @@ export const WorkflowManagementMenu = () => {
   const { thereIsTrigger, editor, workflow, createNewSavedPoint } =
     useWorkflow();
 
+  const apiUtils = api.useUtils();
   const { mutate: saveDataInWorkflow, isPending } =
     api.manageWorkflow.saveDataInWorkflow.useMutation({
-      // onMutate: () => {},
-      onSuccess: () => {
+      onSuccess: ({ savedDependencies, savedTasks }) => {
+        apiUtils.manageWorkflow.getDataFromWorkflow.setData(
+          workflow.id,
+          (prev) => {
+            if (!prev) return;
+
+            return {
+              ...prev,
+              tasks: savedTasks.map((t) => ({
+                ...t,
+                positionX: Number(t.positionX),
+                positionY: Number(t.positionY),
+              })),
+              tasksDependencies: savedDependencies,
+            };
+          },
+        );
         createNewSavedPoint();
         toast.success("Workflow saved successfully");
+      },
+      onError: () => {
+        toast.error("Something went wrong");
       },
     });
 
@@ -53,22 +73,36 @@ export const WorkflowManagementMenu = () => {
 
   const canBeTriggered =
     submitButtonDisabled &&
-    editor.nodes.some((node) => node.data.service.name === "Manual Trigger");
+    editor.nodes.some((node) => node.data.service.name === "Manual Trigger") &&
+    editor.nodes.every((n) => {
+      if (n.data.service.type === "trigger") {
+        return editor.edges.some((e) => e.source === n.id);
+      }
+
+      return editor.edges.some((e) => e.target === n.id);
+    });
 
   const { mutate: triggerWorkflow, isPending: isWorkflowTriggering } =
-    api.manageWorkflow.triggerWorkflow.useMutation();
+    api.manageWorkflow.triggerWorkflow.useMutation({
+      onError: (e) => {
+        if (e.data?.code === "CONFLICT") {
+          toast.error(e.message);
+        } else {
+          toast.error("Something went wrong");
+        }
+      },
+    });
 
   return (
     <>
       <div className="flex w-full gap-2 border-b p-4">
-        <SubmitButton
-          isSubmitting={isPending}
+        <Button
           disabled={submitButtonDisabled}
           variant="outline"
           onClick={handleClick}
         >
-          <SaveAllIcon className="size-4" />
-        </SubmitButton>
+          {isPending ? <LoadingSpinner /> : <SaveAllIcon className="size-4" />}
+        </Button>
 
         {thereIsTrigger && (
           <Button
@@ -81,7 +115,7 @@ export const WorkflowManagementMenu = () => {
             }
             onClick={() => triggerWorkflow(workflow.id)}
             variant={isWorkflowTriggering ? "destructive" : "default"}
-            disabled={isWorkflowTriggering}
+            disabled={isWorkflowTriggering || !canBeTriggered}
           >
             {isWorkflowTriggering ? (
               <CircleIcon className="size-4 fill-current" />

@@ -46,8 +46,8 @@ export async function saveFileInTask(formData: FormData) {
   const taskFilesCreated = await db
     .insert(taskFiles)
     .values(
-      filesUploaded.map(({ data }) => ({
-        fileName: data!.name,
+      filesUploaded.map(({ data }, i) => ({
+        fileName: files![i]!.name,
         fileKey: data!.key,
         fileUrl: data!.url,
         taskId: taskId,

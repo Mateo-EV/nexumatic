@@ -101,8 +101,15 @@ export class WorkflowService {
       .some((task) => task.service.connections.length === 0);
 
     if (isThereLackOfConnections) {
-      throw new WorkFlowServiceError("There is a lack of connections");
+      throw new WorkFlowServiceError("Asure all your services are connected");
     }
+
+    const allOfThemHasConfig = tasksWithDependencies.every((t) =>
+      Boolean(t.configuration),
+    );
+
+    if (!allOfThemHasConfig)
+      throw new WorkFlowServiceError("Configurate all your tasks");
 
     return tasksWithDependencies;
   }
@@ -262,10 +269,6 @@ export class WorkflowService {
 
     return true;
   }
-
-  // public async workflowIsReadyToRun() {
-
-  // }
 }
 
 export class WorkFlowServiceError extends Error {

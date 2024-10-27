@@ -53,7 +53,9 @@ export const DiscordPostMessage = ({ task }: DiscordPostMessageProps) => {
     },
   });
 
-  const [extraFiles, setExtraFiles] = useState<number[]>([]);
+  const [extraFiles, setExtraFiles] = useState<number[]>(
+    task.configuration.fileIds ?? [],
+  );
 
   const { data: discordGuilds, isLoading: isLoadingDiscordGuilds } =
     api.serviceData.discordGuilds.useQuery(undefined, {

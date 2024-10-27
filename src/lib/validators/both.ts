@@ -32,6 +32,8 @@ export const workflowTasksSchema = object({
     }),
   ).max(MAX_TASKS - 1),
 }).refine(({ tasks, taskDependencies }) => {
+  if (taskDependencies.length === 0) return true;
+
   const taskTempIds = tasks.map(({ tempId }) => tempId);
 
   const allIdsExist = taskDependencies.every(
