@@ -308,8 +308,6 @@ type DiscordMessageData = {
   content: string; // El mensaje en sí
   tts?: boolean; // Si es un mensaje de texto a voz (opcional)
   embeds?: Array<{
-    // title: string;
-    // description?: string;
     image: { url: string };
     // color?: number;
     // fields?: Array<{

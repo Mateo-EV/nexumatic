@@ -37,7 +37,6 @@ export const ExternalServices = {
       } else {
         embeds = files.map((f) => ({ image: { url: f.fileUrl } }));
       }
-      console.log(embeds);
 
       try {
         await axios.post(
