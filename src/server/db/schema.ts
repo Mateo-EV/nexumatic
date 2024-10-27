@@ -310,7 +310,7 @@ type DiscordMessageData = {
   embeds?: Array<{
     // title: string;
     // description?: string;
-    url?: string;
+    image: { url: string };
     // color?: number;
     // fields?: Array<{
     //   name: string;

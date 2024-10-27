@@ -3,16 +3,27 @@ import { and, eq } from "drizzle-orm";
 import { type Session } from "next-auth";
 import "server-only";
 import { db } from "../db";
-import { connections, services, tasks, type WorkFlow } from "../db/schema";
+import {
+  Connection,
+  connections,
+  Service,
+  services,
+  TaskConfiguration,
+  TaskFile,
+  taskFiles,
+  tasks,
+  type WorkFlow,
+} from "../db/schema";
 import { ExternalServices } from "./External";
 
 const taskSelect = {
   id: tasks.id,
-  createdAt: tasks.createdAt,
   updatedAt: tasks.updatedAt,
   serviceId: tasks.serviceId,
   workflowId: tasks.workflowId,
-  details: tasks.details,
+  configuration: tasks.configuration,
+  service: services,
+  files: taskFiles,
 };
 
 export class WorkflowService {
@@ -27,11 +38,14 @@ export class WorkflowService {
     this.session = session;
   }
 
+  private configurationTasksData: Record<string, string> = {};
+
   private async getInitialTask() {
-    const [task] = await db
+    const result = await db
       .select(taskSelect)
       .from(tasks)
       .leftJoin(services, eq(services.id, tasks.serviceId))
+      .leftJoin(taskFiles, eq(taskFiles.taskId, tasks.id))
       .where(
         and(
           eq(services.type, "trigger"),
@@ -39,7 +53,21 @@ export class WorkflowService {
         ),
       );
 
-    return task ?? null;
+    const currentTask = result[0];
+
+    if (!currentTask) return null;
+
+    const files = result.map((r) => r.files);
+
+    return {
+      id: currentTask.id,
+      updatedAt: currentTask.updatedAt,
+      serviceId: currentTask.serviceId,
+      workflowId: currentTask.workflowId,
+      configuration: currentTask.configuration,
+      service: currentTask.service,
+      files,
+    };
   }
 
   private async getTasksWithDependencies() {
@@ -58,10 +86,15 @@ export class WorkflowService {
             },
           },
         },
+        files: true,
       },
     });
 
-    console.log(tasksWithDependencies);
+    tasksWithDependencies.forEach(({ files }) => {
+      files.forEach((f) => {
+        this.configurationTasksData[`files.${f.id}`] = f.fileUrl;
+      });
+    });
 
     const isThereLackOfConnections = tasksWithDependencies
       .filter((task) => task.service.type !== "trigger")
@@ -74,6 +107,24 @@ export class WorkflowService {
     return tasksWithDependencies;
   }
 
+  private saveConfigurationData(task: {
+    id: string;
+    updatedAt: Date;
+    serviceId: string;
+    workflowId: string;
+    configuration: TaskConfiguration | null;
+    service: Service | null;
+  }) {
+    if (!task.configuration || !task.service) return;
+
+    if (task.service.name === "Manual Trigger") {
+      if (task.service.method === "clickButton") {
+        this.configurationTasksData["manual.content"] =
+          task.configuration.content ?? "";
+      }
+    }
+  }
+
   private async getWorkflowData() {
     const initialTask = await this.getInitialTask();
 
@@ -81,6 +132,14 @@ export class WorkflowService {
       throw new WorkFlowServiceError(
         "This workflow doesn't have an initial task",
       );
+
+    this.saveConfigurationData(initialTask);
+
+    initialTask.files.forEach((f) => {
+      if (f) {
+        this.configurationTasksData[`files.${f.id}`] = f.fileUrl;
+      }
+    });
 
     const tasksWithDependencies = await this.getTasksWithDependencies();
 
@@ -101,11 +160,19 @@ export class WorkflowService {
       const service = task.service;
       const serviceExternal = ExternalServices[service.name];
 
-      const methodToExecute = serviceExternal[service.method as never] as (
-        t: (typeof task.service.connections)[number],
-      ) => Promise<void>;
+      const methodToExecute = serviceExternal[service.method as never] as (t: {
+        connection: Connection;
+        configuration: TaskConfiguration;
+        configurationTasksData: Record<string, string>;
+        files: TaskFile[];
+      }) => Promise<void>;
 
-      await methodToExecute(task.service.connections[0]!);
+      await methodToExecute({
+        connection: task.service.connections[0]!,
+        configuration: task.configuration!,
+        configurationTasksData: this.configurationTasksData,
+        files: task.files,
+      });
     } catch (error) {
       console.log(error);
     }

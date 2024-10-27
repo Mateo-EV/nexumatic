@@ -1,20 +1,48 @@
 import "server-only";
 
-import {
-  type TaskDetails,
-  type ServicesMethods,
-  type Connection,
-} from "../db/schema";
-import axios from "axios";
 import { env } from "@/env";
+import axios from "axios";
+import {
+  type Connection,
+  type ServicesMethods,
+  TaskConfiguration,
+  TaskFile,
+  TaskSpecificConfigurations,
+} from "../db/schema";
 
 export const ExternalServices = {
   Discord: {
-    postMessage: async () => {
+    postMessage: async ({
+      configuration,
+      configurationTasksData,
+      files,
+    }: {
+      configurationTasksData: Record<string, string>;
+      connection: Connection;
+      configuration: TaskSpecificConfigurations["Discord"]["postMessage"];
+      files: TaskFile[];
+    }) => {
+      const isFromOtherTask =
+        configuration.content.startsWith("{{") &&
+        configuration.content.endsWith("}}");
+
+      const content = isFromOtherTask
+        ? configurationTasksData[configuration.content.slice(2, -2)]
+        : configuration.content;
+
+      let embeds = configuration.embeds;
+
+      if (embeds) {
+        embeds.push(...files.map((f) => ({ image: { url: f.fileUrl } })));
+      } else {
+        embeds = files.map((f) => ({ image: { url: f.fileUrl } }));
+      }
+      console.log(embeds);
+
       try {
         await axios.post(
-          `https://discord.com/api/v9/channels/1243040476844789772/messages`,
-          { content: "message" },
+          `https://discord.com/api/v10/channels/${configuration.channelId}/messages`,
+          { content, tts: configuration.tts, embeds },
           {
             headers: {
               Authorization: `Bot ${env.DISCORD_BOT_TOKEN}`,
@@ -26,4 +54,11 @@ export const ExternalServices = {
       }
     },
   },
-} as ServicesMethods<() => Promise<void>>;
+} as ServicesMethods<
+  (p: {
+    connection: Connection;
+    configuration: TaskConfiguration;
+    configurationTasksData: Record<string, string>;
+    files: TaskFile[];
+  }) => Promise<void>
+>;

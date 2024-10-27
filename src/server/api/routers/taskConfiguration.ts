@@ -98,7 +98,7 @@ export const taskConfigurationRouter = createTRPCRouter({
             ),
           );
 
-        embeds = filesData.map(({ url }) => ({ url }));
+        embeds = filesData.map(({ url }) => ({ image: { url } }));
       }
 
       await updateTask(taskId, { ...configuration, embeds });
