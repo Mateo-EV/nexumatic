@@ -3,8 +3,9 @@ import "server-only";
 import { UTApi } from "uploadthing/server";
 import { db } from "./db";
 import { taskFiles } from "./db/schema";
+import { env } from "@/env";
 
-export const utapi = new UTApi();
+export const utapi = new UTApi({ token: env.UPLOADTHING_TOKEN });
 
 export const deleteFile = (fileId: number) => {
   return db.transaction(async (tsx) => {
