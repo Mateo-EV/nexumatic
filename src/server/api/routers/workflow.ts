@@ -1,6 +1,7 @@
 import { workflowSchema } from "@/lib/validators/both";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
-import { workflows } from "@/server/db/schema";
+import { tasks, workflows } from "@/server/db/schema";
+import { deleteManyTasks } from "@/server/uploadthing";
 import { TRPCError } from "@trpc/server";
 import { and, desc, eq } from "drizzle-orm";
 import { string } from "zod";
@@ -29,15 +30,35 @@ export const workflowRouter = createTRPCRouter({
   delete: protectedProcedure
     .input(string())
     .mutation(async ({ ctx, input: workflowId }) => {
-      const [workflowDeleted] = await ctx.db
-        .delete(workflows)
+      const [workflow] = await ctx.db
+        .select()
+        .from(workflows)
         .where(
           and(
             eq(workflows.userId, ctx.session.user.id),
             eq(workflows.id, workflowId),
           ),
-        )
-        .returning();
+        );
+
+      if (!workflow) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+      const workflowDeleted = await ctx.db.transaction(async (tx) => {
+        const tasksFromWorkflow = await tx.query.tasks.findMany({
+          where: eq(tasks.workflowId, workflowId),
+          with: {
+            files: true,
+          },
+        });
+
+        await deleteManyTasks(tasksFromWorkflow);
+
+        const [workflowDeleted] = await ctx.db
+          .delete(workflows)
+          .where(eq(workflows.id, workflowId))
+          .returning();
+
+        return workflowDeleted;
+      });
 
       if (!workflowDeleted) {
         throw new TRPCError({

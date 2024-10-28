@@ -4,7 +4,6 @@ import {
   type Task,
   taskDependencies,
   type TaskDependency,
-  type TaskFile,
   taskFiles,
   tasks,
   workflows,
@@ -17,33 +16,7 @@ import { TRPCError } from "@trpc/server";
 import { and, eq, inArray, sql, type SQL } from "drizzle-orm";
 import { string } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
-import { db } from "@/server/db";
-import { utapi } from "@/server/uploadthing";
-
-function deleteManyTasks(tasksClient: (Task & { files: TaskFile[] })[]) {
-  if (tasksClient.length === 0) return;
-
-  return db.transaction(async (tx) => {
-    const { keys, tasksIds } = tasksClient.reduce<{
-      keys: string[];
-      tasksIds: string[];
-    }>(
-      (acc, curr) => {
-        const keys = curr.files.map((f) => f.fileKey);
-        const tasksIds = curr.id;
-
-        acc.keys.push(...keys);
-        acc.tasksIds.push(tasksIds);
-        return acc;
-      },
-      { keys: [], tasksIds: [] },
-    );
-
-    await utapi.deleteFiles(keys);
-
-    await tx.delete(tasks).where(inArray(tasks.id, tasksIds));
-  });
-}
+import { deleteManyTasks } from "@/server/uploadthing";
 
 export const manageWorkflowRouter = createTRPCRouter({
   saveDataInWorkflow: protectedProcedure
