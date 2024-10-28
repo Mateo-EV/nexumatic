@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -16,7 +15,6 @@ import {
 
 export const NavbarSearch = () => {
   const [open, setOpen] = useState(false);
-  const router = useRouter();
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {

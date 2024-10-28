@@ -41,6 +41,7 @@ export const TextAreaSelector = forwardRef<
 
       setSelectedOption(selector);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

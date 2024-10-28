@@ -5,9 +5,9 @@ import axios from "axios";
 import {
   type Connection,
   type ServicesMethods,
-  TaskConfiguration,
-  TaskFile,
-  TaskSpecificConfigurations,
+  type TaskConfiguration,
+  type TaskFile,
+  type TaskSpecificConfigurations,
 } from "../db/schema";
 
 export const ExternalServices = {

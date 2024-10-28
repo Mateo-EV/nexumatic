@@ -2,7 +2,6 @@
 
 import { Icons } from "@/components/Icons";
 import { Badge } from "@/components/ui/badge";
-import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardDescription,
@@ -10,7 +9,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { LINKS_CONNECTIONS } from "@/config/const";
 import { cn } from "@/lib/utils";
 import { type ServiceClient } from "@/server/db/schema";
 import { api } from "@/trpc/react";

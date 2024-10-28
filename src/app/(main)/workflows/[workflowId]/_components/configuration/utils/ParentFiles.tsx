@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { type TaskFile } from "@/server/db/schema";
 import { FileTextIcon, PlusIcon, XIcon } from "lucide-react";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTaskParentsConfiguration } from "./useTaskParentConfigurations";
 
 type ParentFilesProps = {

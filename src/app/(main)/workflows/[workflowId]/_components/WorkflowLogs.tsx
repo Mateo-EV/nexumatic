@@ -10,7 +10,7 @@ interface LogEntry {
 }
 
 export const WorkflowLogs = () => {
-  const [logs, setLogs] = useState<LogEntry[]>([
+  const [logs] = useState<LogEntry[]>([
     { type: "info", message: "Workflow initalizated" },
     { type: "warning", message: "There is a lack of data" },
     { type: "error", message: "Something went wrong" },

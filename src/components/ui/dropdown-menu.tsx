@@ -45,7 +45,7 @@ const DropdownMenuSubTriggerManual = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.SubTrigger> & {
     inset?: boolean;
   }
->(({ className, inset, children, ...props }, ref) => (
+>(({ className, children, ...props }, ref) => (
   <DropdownMenuPrimitive.SubTrigger ref={ref} className={className} {...props}>
     {children}
   </DropdownMenuPrimitive.SubTrigger>

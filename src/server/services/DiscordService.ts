@@ -1,8 +1,8 @@
 import { env } from "@/env";
 import axios from "axios";
 import { unstable_cache } from "next/cache";
+import { type Connection } from "../db/schema";
 import { getSession } from "../session";
-import { Connection } from "../db/schema";
 
 interface Guild {
   id: string;

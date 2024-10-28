@@ -24,4 +24,4 @@ const config = {
   },
 };
 
-export default MillionLint.next({ rsc: true })(config);
+export default MillionLint.next({ rsc: true, enabled: true })(config);
