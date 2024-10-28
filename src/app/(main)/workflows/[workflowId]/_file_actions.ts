@@ -1,23 +1,15 @@
 "use server";
 
-import { createObject } from "@/lib/utils";
 import { db } from "@/server/db";
 import { taskFiles, tasks, workflows } from "@/server/db/schema";
 import { getSession } from "@/server/session";
 import { deleteFile, utapi } from "@/server/uploadthing";
 import { and, eq } from "drizzle-orm";
 import { type UploadFileResult } from "uploadthing/types";
-import { array, instanceof as instanceof_, object, string } from "zod";
-
-const fileSchema = array(
-  instanceof_(File).refine((file) => file.size <= 5 * 1024 * 1024, {
-    message: "Each file must be less than 5MB",
-  }),
-).optional();
+import { object, string } from "zod";
 
 const saveFileInTaskSchema = object({
   taskId: string().min(1),
-  files: fileSchema,
 });
 
 export async function saveFileInTask(formData: FormData) {
@@ -25,7 +17,11 @@ export async function saveFileInTask(formData: FormData) {
 
   if (!session) throw new Error("Unauthorized");
 
-  const { files, taskId } = saveFileInTaskSchema.parse(createObject(formData));
+  const { taskId } = saveFileInTaskSchema.parse({
+    taskId: formData.get("taskId"),
+  });
+
+  const files = (formData.getAll("files[]") as File[]) ?? [];
 
   const [task] = await db
     .select({ id: tasks.id })
@@ -47,7 +43,7 @@ export async function saveFileInTask(formData: FormData) {
     .insert(taskFiles)
     .values(
       filesUploaded.map(({ data }, i) => ({
-        fileName: files![i]!.name,
+        fileName: files[i]!.name,
         fileKey: data!.key,
         fileUrl: data!.url,
         taskId: taskId,
