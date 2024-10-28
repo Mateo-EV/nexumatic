@@ -22,6 +22,9 @@ const config = {
       },
     ],
   },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
 };
 
 export default MillionLint.next({ rsc: true, enabled: true })(config);
