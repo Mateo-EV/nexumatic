@@ -1,5 +1,5 @@
 import { ConnectionButton } from "@/app/(main)/connections/_components/ConnectionButton";
-import { SubmitButton } from "@/components/ui/button";
+import { Button, SubmitButton } from "@/components/ui/button";
 import {
   Form,
   FormControl,
@@ -31,6 +31,7 @@ import { ParentFiles } from "./utils/ParentFiles";
 import { useTaskFileTemporalUploader } from "./utils/TaskFileTemporalUploader";
 import { TextAreaSelector } from "./utils/TextAreaSelector";
 import { useUpdateTaskConfig } from "./utils/useUpdateTaskConfig";
+import { RefreshCcwIcon } from "lucide-react";
 
 type DiscordPostMessageProps = {
   task: NodeData & {
@@ -78,6 +79,16 @@ export const DiscordPostMessage = ({ task }: DiscordPostMessageProps) => {
     "updateDiscordPostMessageConfiguration",
   );
 
+  const apiUtils = api.useUtils();
+
+  const { mutate: reloadDiscordData, isPending: isRealoading } =
+    api.serviceData.restartDiscordData.useMutation({
+      onSuccess: async () => {
+        await apiUtils.serviceData.discordGuilds.refetch();
+        await apiUtils.serviceData.discordChannels.refetch();
+      },
+    });
+
   const { Dropzone, FilesRendered, uploadFileToTask, isUploadingFileToTask } =
     useTaskFileTemporalUploader({
       taskId: task.id,
@@ -113,7 +124,18 @@ export const DiscordPostMessage = ({ task }: DiscordPostMessageProps) => {
           name="guildId"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Server</FormLabel>
+              <div className="flex justify-between">
+                <FormLabel>Server</FormLabel>
+                <button
+                  type="button"
+                  className="text-primary"
+                  onClick={() => reloadDiscordData()}
+                >
+                  <RefreshCcwIcon
+                    className={`size-4 ${isRealoading ? "animate-spin" : ""}`}
+                  />
+                </button>
+              </div>
               <Select onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>
                   <SelectTrigger>

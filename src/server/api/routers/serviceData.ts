@@ -6,6 +6,7 @@ import { createTRPCRouter, protectedProcedure } from "../trpc";
 import { db } from "@/server/db";
 import { type Session } from "next-auth";
 import { string } from "zod";
+import { revalidateTag } from "next/cache";
 
 async function getConnection(session: Session, serviceName: Service["name"]) {
   const [connection] = await db
@@ -64,4 +65,7 @@ export const serviceDataRouter = createTRPCRouter({
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
       }
     }),
+  restartDiscordData: protectedProcedure.mutation(({ ctx }) => {
+    revalidateTag(`common_guilds-${ctx.session.user.id}`);
+  }),
 });

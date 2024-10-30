@@ -174,13 +174,20 @@ export const manageWorkflowRouter = createTRPCRouter({
             );
           }
 
-          const saveTasksIds = tasksFromClient.reduce(
+          let indexFinished = 0;
+          const saveTasksIds1 = existingTasks.reduce(
             (acc, curr, index) => {
+              indexFinished++;
               acc[curr.tempId] = savedTasks[index]!.id;
               return acc;
             },
             {} as Record<string, string>,
           );
+
+          const saveTasksIds = nonExistingTasks.reduce((acc, curr, index) => {
+            acc[curr.tempId] = savedTasks[indexFinished + index]!.id;
+            return acc;
+          }, saveTasksIds1);
 
           let savedDependencies: TaskDependency[] = [];
 

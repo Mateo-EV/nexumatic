@@ -38,20 +38,24 @@ export class DiscordService {
   }
 
   private async getCacheableCommonGuilds(userId: string) {
-    const functionCached = unstable_cache(async () => {
-      const [userGuilds, botGuilds] = await Promise.all([
-        this.getUserGuilds(),
-        this.getBotGuilds(),
-      ]);
+    const functionCached = unstable_cache(
+      async () => {
+        const [userGuilds, botGuilds] = await Promise.all([
+          this.getUserGuilds(),
+          this.getBotGuilds(),
+        ]);
 
-      if (!userGuilds || !botGuilds) {
-        throw new Error("Something went wrong");
-      }
+        if (!userGuilds || !botGuilds) {
+          throw new Error("Something went wrong");
+        }
 
-      const botGuildIds = new Set(botGuilds.map((guild) => guild.id));
+        const botGuildIds = new Set(botGuilds.map((guild) => guild.id));
 
-      return userGuilds.filter((guild) => botGuildIds.has(guild.id));
-    }, ["common_guilds", userId]);
+        return userGuilds.filter((guild) => botGuildIds.has(guild.id));
+      },
+      ["common_guilds", userId],
+      { tags: [`common_guilds-${userId}`] },
+    );
 
     return functionCached();
   }

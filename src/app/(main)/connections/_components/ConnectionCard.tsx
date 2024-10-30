@@ -12,7 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { type ServiceClient } from "@/server/db/schema";
 import { api } from "@/trpc/react";
-import { ConnectionButton } from "./ConnectionButton";
+import { ConnectionButton, ReConnectionButton } from "./ConnectionButton";
 
 type ConnectionCardProps = {
   service: ServiceClient;
@@ -57,7 +57,7 @@ export const ConnectionCard = ({ service }: ConnectionCardProps) => {
         {isPending ? (
           <Skeleton className="h-10 w-32 rounded-md" />
         ) : connection ? (
-          <Badge variant="outline">Connected</Badge>
+          <ReConnectionButton serviceName={service.name} />
         ) : (
           <ConnectionButton serviceName={service.name} />
         )}

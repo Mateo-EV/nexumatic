@@ -22,3 +22,20 @@ export const ConnectionButton = ({
     </a>
   );
 };
+
+export const ReConnectionButton = ({
+  serviceName,
+  className,
+  ...props
+}: ConnectionButtonProps) => {
+  return (
+    <a
+      href={LINKS_CONNECTIONS[serviceName]}
+      target="_blank"
+      className={cn(buttonVariants({ variant: "secondary" }), className)}
+      {...props}
+    >
+      Reconnect
+    </a>
+  );
+};

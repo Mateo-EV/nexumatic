@@ -510,7 +510,7 @@ export type TaskLog = InferSelectModel<typeof taskLogs>;
 export const taskFiles = pgTable("task_files", {
   id: serial("id").primaryKey(),
   taskId: uuid("task_id").references(() => tasks.id, {
-    onDelete: "restrict",
+    onDelete: "cascade",
     onUpdate: "cascade",
   }),
   fileName: varchar("file_name", { length: 255 }).notNull(),
