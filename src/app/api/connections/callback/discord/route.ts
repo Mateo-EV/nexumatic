@@ -76,7 +76,9 @@ export async function GET(req: NextRequest) {
         userId: session.user.id,
         accessToken: access_token,
         refreshToken: refresh_token,
-        expiresAt: new Date(expires_in * 1000),
+        expiresAt: new Date(
+          (Math.floor(Date.now() / 1000) + expires_in) * 1000,
+        ),
       })
       .onConflictDoUpdate({
         target: [connections.userId, connections.serviceId],

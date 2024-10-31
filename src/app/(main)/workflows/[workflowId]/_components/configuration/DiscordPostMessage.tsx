@@ -1,5 +1,5 @@
 import { ConnectionButton } from "@/app/(main)/connections/_components/ConnectionButton";
-import { Button, SubmitButton } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/button";
 import {
   Form,
   FormControl,

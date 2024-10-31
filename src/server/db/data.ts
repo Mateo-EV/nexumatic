@@ -1,6 +1,9 @@
 import "server-only";
 import { unstable_cache } from "next/cache";
 import { db } from ".";
+import { connections, type Service, services } from "./schema";
+import { and, eq, sql } from "drizzle-orm";
+import { getSession } from "../session";
 
 export const getAvailableServicesForUser = unstable_cache(
   async () => {
@@ -38,3 +41,45 @@ export const getAvailableServicesForUser = unstable_cache(
   ["services"],
   { tags: ["services"] },
 );
+
+export async function saveConnection({
+  service,
+  access_token,
+  expires_in,
+  refresh_token,
+}: {
+  service: { name: Service["name"]; method: Service["method"] };
+  access_token: string;
+  refresh_token: string;
+  expires_in: number;
+}) {
+  const session = (await getSession())!;
+
+  const { id: serviceId } = (await db.query.services.findFirst({
+    where: and(
+      eq(services.name, service.name),
+      eq(services.method, service.method),
+    ),
+    columns: {
+      id: true,
+    },
+  }))!;
+
+  await db
+    .insert(connections)
+    .values({
+      serviceId,
+      userId: session.user.id,
+      accessToken: access_token,
+      refreshToken: refresh_token,
+      expiresAt: new Date((Math.floor(Date.now() / 1000) + expires_in) * 1000),
+    })
+    .onConflictDoUpdate({
+      target: [connections.userId, connections.serviceId],
+      set: {
+        accessToken: sql.raw(`excluded.${connections.accessToken.name}`),
+        refreshToken: sql.raw(`excluded.${connections.refreshToken.name}`),
+        expiresAt: sql.raw(`excluded.${connections.expiresAt.name}`),
+      },
+    });
+}
