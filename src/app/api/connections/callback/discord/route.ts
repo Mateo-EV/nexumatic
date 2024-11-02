@@ -6,6 +6,8 @@ import { db } from "@/server/db";
 import { connections, services } from "@/server/db/schema";
 import { and, eq, sql } from "drizzle-orm";
 import { getSession } from "@/server/session";
+import { formatExpiresAt } from "@/lib/utils";
+import { saveConnection } from "@/server/db/data";
 
 const discordSearchParamsSchema = object({
   code: string().min(1),
@@ -59,35 +61,12 @@ export async function GET(req: NextRequest) {
       },
     );
 
-    const { id: serviceId } = (await db.query.services.findFirst({
-      where: and(
-        eq(services.name, "Discord"),
-        eq(services.method, "postMessage"),
-      ),
-      columns: {
-        id: true,
-      },
-    }))!;
-
-    await db
-      .insert(connections)
-      .values({
-        serviceId,
-        userId: session.user.id,
-        accessToken: access_token,
-        refreshToken: refresh_token,
-        expiresAt: new Date(
-          (Math.floor(Date.now() / 1000) + expires_in) * 1000,
-        ),
-      })
-      .onConflictDoUpdate({
-        target: [connections.userId, connections.serviceId],
-        set: {
-          accessToken: sql.raw(`excluded.${connections.accessToken.name}`),
-          refreshToken: sql.raw(`excluded.${connections.refreshToken.name}`),
-          expiresAt: sql.raw(`excluded.${connections.expiresAt.name}`),
-        },
-      });
+    await saveConnection({
+      service: { name: "Discord", method: "postMessage" },
+      access_token,
+      expires_in,
+      refresh_token,
+    });
 
     return Response.redirect(`${env.NEXT_PUBLIC_BASE_URL}/connections`);
   } catch (e) {

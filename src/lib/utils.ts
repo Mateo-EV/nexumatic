@@ -27,3 +27,7 @@ export function createObject(formData: FormData) {
 
   return entries;
 }
+
+export function formatExpiresAt(expiresIn: number) {
+  return new Date((Math.floor(Date.now() / 1000) + expiresIn) * 1000);
+}

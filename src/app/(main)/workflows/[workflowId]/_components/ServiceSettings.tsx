@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { ConfigurationSkeleton } from "./configuration/ConfigurationSkeleton";
 import { DiscordPostMessage } from "./configuration/DiscordPostMessage";
 import { ManualTriggerClickButton } from "./configuration/ManualTriggerClickButton";
+import { GoogleDriveListeningFiles } from "./configuration/GoogleDriveListeningFiles";
 
 export const ServiceSettings = ({ data }: { data: NodeData }) => {
   const {
@@ -105,9 +106,7 @@ const ServicesSpecificConfigurations = {
     postMessage: DiscordPostMessage,
   },
   "Google Drive": {
-    listenFilesAdded: () => {
-      return <div></div>;
-    },
+    listenFilesAdded: GoogleDriveListeningFiles,
   },
   "Manual Trigger": {
     clickButton: ManualTriggerClickButton,

@@ -70,7 +70,7 @@ export const ServicesData = {
 } satisfies ServicesMethods<{ description: string }>;
 
 export const LINKS_CONNECTIONS = {
-  "Google Drive": `https://accounts.google.com/o/oauth2/v2/auth?client_id=${env.NEXT_PUBLIC_GOOGLE_CLIENT_ID}&redirect_uri=${encodeURIComponent(env.NEXT_PUBLIC_BASE_URL + "/api/connections/callback/drive")}&response_type=code&scope=${encodeURIComponent("https://www.googleapis.com/auth/drive")}&access_type=offline`,
+  "Google Drive": `https://accounts.google.com/o/oauth2/v2/auth?client_id=${env.NEXT_PUBLIC_GOOGLE_CLIENT_ID}&redirect_uri=${encodeURIComponent(env.NEXT_PUBLIC_BASE_URL + "/api/connections/callback/drive")}&response_type=code&scope=${encodeURIComponent("https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/drive.activity.readonly")}&access_type=offline`,
 
   Discord: `https://discord.com/oauth2/authorize?response_type=code&client_id=${env.NEXT_PUBLIC_DISCORD_CLIENT_ID}&redirect_uri=${encodeURIComponent(env.NEXT_PUBLIC_BASE_URL + "/api/connections/callback/discord")}&scope=guilds+bot&permissions=52224`,
 } as Record<keyof ServicesMethods, string>;

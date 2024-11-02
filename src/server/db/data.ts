@@ -4,6 +4,7 @@ import { db } from ".";
 import { connections, type Service, services } from "./schema";
 import { and, eq, sql } from "drizzle-orm";
 import { getSession } from "../session";
+import { formatExpiresAt } from "@/lib/utils";
 
 export const getAvailableServicesForUser = unstable_cache(
   async () => {
@@ -72,7 +73,7 @@ export async function saveConnection({
       userId: session.user.id,
       accessToken: access_token,
       refreshToken: refresh_token,
-      expiresAt: new Date((Math.floor(Date.now() / 1000) + expires_in) * 1000),
+      expiresAt: formatExpiresAt(expires_in),
     })
     .onConflictDoUpdate({
       target: [connections.userId, connections.serviceId],

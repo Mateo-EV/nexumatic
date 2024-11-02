@@ -310,12 +310,6 @@ type DiscordMessageData = {
   embeds?: Array<
     | {
         image: { url: string };
-        // color?: number;
-        // fields?: Array<{
-        //   name: string;
-        //   value: string;
-        //   inline?: boolean;
-        // }>;
       }
     | { url: string; title: string; description: string }
   >;
@@ -326,7 +320,14 @@ type DiscordMessageData = {
 
 export type TaskSpecificConfigurations = {
   Discord: { postMessage: DiscordMessageData };
-  ["Google Drive"]: { listenFilesAdded: null };
+  ["Google Drive"]: {
+    listenFilesAdded: {
+      pageToken: string;
+      channelId: string;
+      subscribed: boolean;
+      folderId: string;
+    };
+  };
   ["Manual Trigger"]: {
     clickButton: {
       content?: string;
