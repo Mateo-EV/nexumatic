@@ -325,7 +325,7 @@ export type TaskSpecificConfigurations = {
       pageToken: string;
       channelId: string;
       subscribed: boolean;
-      folderId: string;
+      folderId?: string;
     };
   };
   ["Manual Trigger"]: {
@@ -337,7 +337,8 @@ export type TaskSpecificConfigurations = {
 
 export type TaskConfiguration =
   | TaskSpecificConfigurations["Discord"]["postMessage"]
-  | TaskSpecificConfigurations["Manual Trigger"]["clickButton"];
+  | TaskSpecificConfigurations["Manual Trigger"]["clickButton"]
+  | TaskSpecificConfigurations["Google Drive"]["listenFilesAdded"];
 
 export const tasks = pgTable("tasks", {
   id: uuid("id").defaultRandom().primaryKey(),

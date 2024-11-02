@@ -1,21 +1,21 @@
+import { formatExpiresAt } from "@/lib/utils";
+import { db } from "@/server/db";
 import {
   connections,
   type Service,
   services,
   tasks,
+  TaskSpecificConfigurations,
   workflows,
 } from "@/server/db/schema";
 import { DiscordService } from "@/server/services/DiscordService";
+import { GoogleDriveService } from "@/server/services/GoogleDriveService";
 import { TRPCError } from "@trpc/server";
 import { and, eq } from "drizzle-orm";
-import { createTRPCRouter, protectedProcedure } from "../trpc";
-import { db } from "@/server/db";
 import { type Session } from "next-auth";
-import { string } from "zod";
 import { revalidateTag } from "next/cache";
-import axios from "axios";
-import { GoogleDriveService } from "@/server/services/GoogleDriveService";
-import { formatExpiresAt } from "@/lib/utils";
+import { string } from "zod";
+import { createTRPCRouter, protectedProcedure } from "../trpc";
 
 async function getConnection(session: Session, serviceName: Service["name"]) {
   const [connection] = await db
@@ -85,7 +85,7 @@ export const serviceDataRouter = createTRPCRouter({
       if (!connection) throw new TRPCError({ code: "NOT_FOUND" });
 
       const [task] = await db
-        .select({ id: tasks.id })
+        .select({ id: tasks.id, configuration: tasks.configuration })
         .from(tasks)
         .leftJoin(workflows, eq(workflows.id, tasks.workflowId))
         .where(
@@ -94,50 +94,26 @@ export const serviceDataRouter = createTRPCRouter({
 
       if (!task) throw new TRPCError({ code: "NOT_FOUND" });
 
-      const googleDriveService = new GoogleDriveService(connection);
-
-      let startPageToken = undefined;
-
       try {
-        startPageToken = await googleDriveService.getStartPageToken();
-      } catch {
-        try {
-          const { access_token, expires_in, refresh_token } =
-            await googleDriveService.refreshAccessToken();
+        const googleDriveService = new GoogleDriveService(connection);
 
-          const [newConnection] = await db
-            .update(connections)
-            .set({
-              accessToken: access_token,
-              expiresAt: formatExpiresAt(expires_in),
-              refreshToken: refresh_token,
-            })
-            .where(eq(connections.id, connection.id))
-            .returning();
+        await googleDriveService.init();
 
-          googleDriveService.connection = newConnection!;
+        const startPageToken = await googleDriveService.getStartPageToken();
 
-          startPageToken = await googleDriveService.getStartPageToken();
-        } catch (e) {
-          console.log(e);
+        const configurationTask =
+          task.configuration as TaskSpecificConfigurations["Google Drive"]["listenFilesAdded"];
 
-          throw new TRPCError({ code: "SERVICE_UNAVAILABLE" });
-        }
+        const data = await googleDriveService.createOrUpdateListener(
+          startPageToken,
+          configurationTask.channelId ?? undefined,
+        );
+
+        return data;
+      } catch (error) {
+        console.log(error);
+
+        throw new TRPCError({ code: "CONFLICT" });
       }
-
-      const channelId = crypto.randomUUID();
-
-      // await axios.post(
-      //   'https://www.googleapis.com/drive/v3/changes/watch',
-      //   {
-      //     pageToken,
-      //     id: channelId, // Identificador único del canal
-      //     type: 'web_hook',
-      //     address: `https://your-server.com/api/notifications`, // URL pública
-      //   },
-      //   { headers: { Authorization: `Bearer ${accessToken}` } }
-      // );
-
-      return "";
     }),
 });

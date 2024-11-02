@@ -84,3 +84,27 @@ export async function saveConnection({
       },
     });
 }
+
+export async function updateConnection({
+  access_token,
+  expires_in,
+  refresh_token,
+  connectionId,
+}: {
+  access_token: string;
+  refresh_token: string;
+  expires_in: number;
+  connectionId: string;
+}) {
+  const [newConnection] = await db
+    .update(connections)
+    .set({
+      accessToken: access_token,
+      expiresAt: formatExpiresAt(expires_in),
+      refreshToken: refresh_token,
+    })
+    .where(eq(connections.id, connectionId))
+    .returning();
+
+  return newConnection!;
+}
