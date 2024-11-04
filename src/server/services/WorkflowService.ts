@@ -1,6 +1,5 @@
 import { type workflowTasksSchemaType } from "@/lib/validators/both";
 import { and, eq } from "drizzle-orm";
-import { type Session } from "next-auth";
 import "server-only";
 import { db } from "../db";
 import {
@@ -12,6 +11,7 @@ import {
   type TaskFile,
   taskFiles,
   tasks,
+  type TaskSpecificConfigurations,
   type WorkFlow,
 } from "../db/schema";
 import { ExternalServices } from "./External";
@@ -26,16 +26,23 @@ const taskSelect = {
   files: taskFiles,
 };
 
+interface ExternalFile {
+  blob: Blob;
+  name: string;
+}
+
 export class WorkflowService {
   private workflow: WorkFlow;
-  private session: Session = null!;
+  private userId: string = null!;
+  private externalFiles: ExternalFile[] | undefined = undefined;
 
-  constructor(workflow: WorkFlow) {
+  constructor(workflow: WorkFlow, externalFiles?: ExternalFile[]) {
     this.workflow = workflow;
+    this.externalFiles = externalFiles;
   }
 
-  public setSession(session: Session) {
-    this.session = session;
+  public setUserId(userId: string) {
+    this.userId = userId;
   }
 
   private configurationTasksData: Record<string, string> = {};
@@ -81,7 +88,7 @@ export class WorkflowService {
           columns: { name: true, method: true, type: true },
           with: {
             connections: {
-              where: eq(connections.userId, this.session.user.id),
+              where: eq(connections.userId, this.userId),
               limit: 1,
             },
           },
@@ -127,7 +134,9 @@ export class WorkflowService {
     if (task.service.name === "Manual Trigger") {
       if (task.service.method === "clickButton") {
         this.configurationTasksData["manual.content"] =
-          task.configuration.content ?? "";
+          (
+            task.configuration as TaskSpecificConfigurations["Manual Trigger"]["clickButton"]
+          ).content ?? "";
       }
     }
   }
@@ -172,6 +181,7 @@ export class WorkflowService {
         configuration: TaskConfiguration;
         configurationTasksData: Record<string, string>;
         files: TaskFile[];
+        externalFiles?: ExternalFile[];
       }) => Promise<void>;
 
       await methodToExecute({
@@ -179,6 +189,7 @@ export class WorkflowService {
         configuration: task.configuration!,
         configurationTasksData: this.configurationTasksData,
         files: task.files,
+        externalFiles: this.externalFiles,
       });
     } catch (error) {
       console.log(error);

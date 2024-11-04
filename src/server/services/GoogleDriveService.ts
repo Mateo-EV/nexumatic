@@ -81,11 +81,22 @@ export class GoogleDriveService extends ExternalService {
         kind: "api#channel",
         id: channelId, // Identificador único del canal
         type: "web_hook",
-        address: `https://nexumatic.com/api/notifications/drive`, // URL pública
+        address: `https://6ef6-2800-200-f488-914a-e43e-f4a-aedb-462a.ngrok-free.app/api/notifications/drive`, // URL pública
       },
       { headers: { Authorization: `Bearer ${this.connection.accessToken}` } },
     );
 
     return response.data;
+  }
+
+  public async deleteListener(channelId: string, resourceId: string) {
+    await axios.post(
+      "https://www.googleapis.com/drive/v3/channels/stop",
+      {
+        id: channelId,
+        resourceId: resourceId,
+      },
+      { headers: { Authorization: `Bearer ${this.connection.accessToken}` } },
+    );
   }
 }

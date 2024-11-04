@@ -24,7 +24,7 @@ export const workflowRouter = createTRPCRouter({
   getAllFromUser: protectedProcedure.query(async ({ ctx }) => {
     return await ctx.db.query.workflows.findMany({
       where: eq(workflows.userId, ctx.session.user.id),
-      orderBy: desc(workflows.updatedAt),
+      orderBy: desc(workflows.createdAt),
     });
   }),
   delete: protectedProcedure

@@ -77,7 +77,7 @@ export const LINKS_CONNECTIONS = {
 
 export const ServicesStringSelector = {
   "Google Drive": {
-    listenFilesAdded: [{ name: "", value: "" }],
+    listenFilesAdded: [],
   },
   Discord: {
     postMessage: [],

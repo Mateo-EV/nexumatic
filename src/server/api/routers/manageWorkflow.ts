@@ -259,9 +259,16 @@ export const manageWorkflowRouter = createTRPCRouter({
 
       if (!workflow) throw new TRPCError({ code: "UNAUTHORIZED" });
 
+      if (workflow.isRunning) throw new TRPCError({ code: "BAD_REQUEST" });
+
+      await ctx.db
+        .update(workflows)
+        .set({ isRunning: true })
+        .where(eq(workflows.id, workflowId));
+
       const workflowService = new WorkflowService(workflow);
 
-      workflowService.setSession(ctx.session);
+      workflowService.setUserId(ctx.session.user.id);
 
       try {
         await workflowService.executeWorkflow();
@@ -270,6 +277,11 @@ export const manageWorkflowRouter = createTRPCRouter({
           throw new TRPCError({ code: "CONFLICT", message: error.message });
         }
       }
+
+      await ctx.db
+        .update(workflows)
+        .set({ isRunning: false })
+        .where(eq(workflows.id, workflowId));
 
       return;
     }),

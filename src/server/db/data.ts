@@ -1,10 +1,10 @@
-import "server-only";
-import { unstable_cache } from "next/cache";
-import { db } from ".";
-import { connections, type Service, services } from "./schema";
-import { and, eq, sql } from "drizzle-orm";
-import { getSession } from "../session";
 import { formatExpiresAt } from "@/lib/utils";
+import { and, eq, sql } from "drizzle-orm";
+import { unstable_cache } from "next/cache";
+import "server-only";
+import { db } from ".";
+import { getSession } from "../session";
+import { connections, type Service, services } from "./schema";
 
 export const getAvailableServicesForUser = unstable_cache(
   async () => {
@@ -107,4 +107,26 @@ export async function updateConnection({
     .returning();
 
   return newConnection!;
+}
+
+export async function getConnection(
+  userId: string,
+  serviceName: Service["name"],
+) {
+  const [connection] = await db
+    .select({
+      id: connections.id,
+      createdAt: connections.createdAt,
+      userId: connections.userId,
+      updatedAt: connections.updatedAt,
+      serviceId: connections.serviceId,
+      accessToken: connections.accessToken,
+      refreshToken: connections.refreshToken,
+      expiresAt: connections.expiresAt,
+    })
+    .from(connections)
+    .innerJoin(services, eq(services.id, connections.serviceId))
+    .where(and(eq(connections.userId, userId), eq(services.name, serviceName)));
+
+  return connection;
 }

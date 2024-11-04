@@ -53,6 +53,8 @@ const ParentFilesLoaded = ({
     setExtraFiles((prev) => [...prev, fileId]);
   }
 
+  if (initialFiles.length === 0) return;
+
   return (
     <div className="grid grid-cols-3 gap-2">
       {initialFiles.map((file) => (

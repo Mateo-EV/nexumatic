@@ -1,5 +1,6 @@
 import { type InferSelectModel, relations } from "drizzle-orm";
 import {
+  boolean,
   index,
   integer,
   jsonb,
@@ -184,14 +185,7 @@ export const workflows = pgTable("workflows", {
   })
     .notNull()
     .defaultNow(),
-  updatedAt: timestamp("updated_at", {
-    precision: 0,
-    mode: "date",
-    withTimezone: true,
-  })
-    .notNull()
-    .defaultNow()
-    .$onUpdate(() => new Date()),
+  isRunning: boolean("is_running").default(false).notNull(),
 });
 
 export const workflowsRelations = relations(workflows, ({ one, many }) => ({
@@ -316,6 +310,7 @@ type DiscordMessageData = {
   channelId: string;
   guildId: string;
   fileIds?: number[];
+  includeFiles?: boolean;
 };
 
 export type TaskSpecificConfigurations = {
@@ -326,6 +321,7 @@ export type TaskSpecificConfigurations = {
       channelId: string;
       subscribed: boolean;
       folderId?: string;
+      resourceId: string;
     };
   };
   ["Manual Trigger"]: {

@@ -16,17 +16,22 @@ export const ExternalServices = {
       configuration,
       configurationTasksData,
       files,
+      externalFiles,
     }: {
       configurationTasksData: Record<string, string>;
       connection: Connection;
       configuration: TaskSpecificConfigurations["Discord"]["postMessage"];
       files: TaskFile[];
+      externalFiles?: {
+        blob: Blob;
+        name: string;
+      }[];
     }) => {
-      const isFromOtherTask =
+      const isContentFromOtherTask =
         configuration.content.startsWith("{{") &&
         configuration.content.endsWith("}}");
 
-      const content = isFromOtherTask
+      const content = isContentFromOtherTask
         ? configurationTasksData[configuration.content.slice(2, -2)]
         : configuration.content;
 
@@ -52,10 +57,23 @@ export const ExternalServices = {
         });
       }
 
+      const form = new FormData();
+      form.append(
+        "payload_json",
+        JSON.stringify({ content, tts: configuration.tts, embeds }),
+      );
+
+      if (configuration.includeFiles && externalFiles) {
+        externalFiles.forEach(({ blob, name }) =>
+          form.append("file", blob, name),
+        );
+        console.log(externalFiles);
+      }
+
       try {
         await axios.post(
           `https://discord.com/api/v10/channels/${configuration.channelId}/messages`,
-          { content, tts: configuration.tts, embeds },
+          form,
           {
             headers: {
               Authorization: `Bot ${env.DISCORD_BOT_TOKEN}`,
@@ -73,5 +91,6 @@ export const ExternalServices = {
     configuration: TaskConfiguration;
     configurationTasksData: Record<string, string>;
     files: TaskFile[];
+    externalFiles?: Blob[];
   }) => Promise<void>
 >;

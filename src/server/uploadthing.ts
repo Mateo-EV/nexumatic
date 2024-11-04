@@ -2,8 +2,21 @@ import { eq, inArray } from "drizzle-orm";
 import "server-only";
 import { UTApi } from "uploadthing/server";
 import { db } from "./db";
-import { type Task, type TaskFile, taskFiles, tasks } from "./db/schema";
+import {
+  connections,
+  type Service,
+  type Task,
+  TaskConfiguration,
+  type TaskFile,
+  taskFiles,
+  tasks,
+  TaskSpecificConfigurations,
+} from "./db/schema";
 import { env } from "@/env";
+import { getSession } from "./session";
+import { getConnection } from "./db/data";
+import { GoogleDriveService } from "./services/GoogleDriveService";
+import { TRPCError } from "@trpc/server";
 
 export const utapi = new UTApi({ token: env.UPLOADTHING_TOKEN });
 
@@ -18,10 +31,12 @@ export const deleteFile = (fileId: number) => {
   });
 };
 
-export function deleteManyTasks(tasksClient: (Task & { files: TaskFile[] })[]) {
+export async function deleteManyTasks(
+  tasksClient: (Task & { files: TaskFile[] })[],
+) {
   if (tasksClient.length === 0) return;
 
-  return db.transaction(async (tx) => {
+  return await db.transaction(async (tx) => {
     const { keys, tasksIds } = tasksClient.reduce<{
       keys: string[];
       tasksIds: string[];

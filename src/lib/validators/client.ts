@@ -5,4 +5,5 @@ export const discordPostMessageConfigClientSchema = object({
   tts: boolean(),
   guildId: string(),
   channelId: string(),
+  includeFiles: boolean(),
 });

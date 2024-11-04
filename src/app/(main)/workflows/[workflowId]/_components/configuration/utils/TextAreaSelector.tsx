@@ -40,6 +40,8 @@ export const TextAreaSelector = forwardRef<
         null;
 
       setSelectedOption(selector);
+    } else {
+      textAreaRef.current!.textArea.value = defaultValue;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -79,29 +81,31 @@ export const TextAreaSelector = forwardRef<
           </div>
         )}
       </div>
-      <DropdownMenuPortal>
-        <DropdownMenuSubContent
-          sideOffset={10}
-          className="w-[18rem]"
-          onFocusOutside={(e) => {
-            if (textAreaRef.current!.textArea === document.activeElement) {
-              e.preventDefault();
-            }
-          }}
-        >
-          <div className="flex flex-wrap gap-4 p-4">
-            {selectors.map(({ name, value }) => (
-              <div
-                key={value}
-                className="cursor-pointer border bg-secondary p-1 text-xs text-black"
-                onClick={() => setSelectedOption({ value, name })}
-              >
-                {name}
-              </div>
-            ))}
-          </div>
-        </DropdownMenuSubContent>
-      </DropdownMenuPortal>
+      {selectors.length > 0 && (
+        <DropdownMenuPortal>
+          <DropdownMenuSubContent
+            sideOffset={10}
+            className="w-[18rem]"
+            onFocusOutside={(e) => {
+              if (textAreaRef.current!.textArea === document.activeElement) {
+                e.preventDefault();
+              }
+            }}
+          >
+            <div className="flex flex-wrap gap-4 p-4">
+              {selectors.map(({ name, value }) => (
+                <div
+                  key={value}
+                  className="cursor-pointer border bg-secondary p-1 text-xs text-black"
+                  onClick={() => setSelectedOption({ value, name })}
+                >
+                  {name}
+                </div>
+              ))}
+            </div>
+          </DropdownMenuSubContent>
+        </DropdownMenuPortal>
+      )}
     </DropdownMenuSub>
   );
 });

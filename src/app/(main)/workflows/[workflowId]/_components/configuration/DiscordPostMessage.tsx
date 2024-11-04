@@ -32,6 +32,7 @@ import { useTaskFileTemporalUploader } from "./utils/TaskFileTemporalUploader";
 import { TextAreaSelector } from "./utils/TextAreaSelector";
 import { useUpdateTaskConfig } from "./utils/useUpdateTaskConfig";
 import { RefreshCcwIcon } from "lucide-react";
+import { AcceptParentFiles } from "./utils/AcceptParentFiles";
 
 type DiscordPostMessageProps = {
   task: NodeData & {
@@ -51,6 +52,7 @@ export const DiscordPostMessage = ({ task }: DiscordPostMessageProps) => {
       channelId: task.configuration.channelId ?? "",
       guildId: task.configuration.guildId ?? "",
       tts: task.configuration.tts ?? false,
+      includeFiles: task.configuration.includeFiles ?? false,
     },
   });
 
@@ -95,17 +97,20 @@ export const DiscordPostMessage = ({ task }: DiscordPostMessageProps) => {
       savedFiles: task.configuration.files,
     });
 
-  const onSubmit = form.handleSubmit(({ channelId, content, guildId, tts }) => {
-    updateConfiguration({
-      channelId,
-      guildId,
-      content,
-      embeds: extraFiles.map((fileId) => ({ fileId })),
-      tts,
-    });
+  const onSubmit = form.handleSubmit(
+    ({ channelId, content, guildId, tts, includeFiles }) => {
+      updateConfiguration({
+        channelId,
+        guildId,
+        content,
+        embeds: extraFiles.map((fileId) => ({ fileId })),
+        tts,
+        includeFiles,
+      });
 
-    uploadFileToTask();
-  });
+      uploadFileToTask();
+    },
+  );
 
   const DiscordForm = () => {
     if (isLoadingDiscordGuilds) {
@@ -246,6 +251,16 @@ export const DiscordPostMessage = ({ task }: DiscordPostMessageProps) => {
           />
           <FilesRendered />
           <Dropzone />
+          <FormField
+            control={form.control}
+            name="includeFiles"
+            render={({ field }) => (
+              <AcceptParentFiles
+                value={field.value}
+                setValue={field.onChange}
+              />
+            )}
+          />
         </div>
         <DiscordForm />
       </form>

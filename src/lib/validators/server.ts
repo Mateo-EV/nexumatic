@@ -5,10 +5,10 @@ export const manualTriggerClickButtonConfigServerSchema = object({
   taskId: string(),
   configuration: object({
     content: string()
-    .min(1, "Content is required")
-    .max(600, "Content too long")
-    .optional(),
-  })
+      .min(1, "Content is required")
+      .max(600, "Content too long")
+      .optional(),
+  }),
 });
 
 export const discordPostMessageConfigServerSchema = object({
@@ -23,5 +23,11 @@ export const discordPostMessageConfigServerSchema = object({
     ).optional(),
     guildId: string(),
     channelId: string(),
+    includeFiles: boolean().optional(),
   }),
+});
+
+export const googleDriveListenFilesAddedServerSchema = object({
+  taskId: string(),
+  configuration: object({}),
 });

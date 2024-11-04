@@ -1,16 +1,20 @@
 import {
   discordPostMessageConfigServerSchema,
+  googleDriveListenFilesAddedServerSchema,
   manualTriggerClickButtonConfigServerSchema,
 } from "@/lib/validators/server";
 import { db } from "@/server/db";
+import { getConnection } from "@/server/db/data";
 import {
   type Service,
   services,
   type TaskConfiguration,
   taskFiles,
   tasks,
+  type TaskSpecificConfigurations,
   workflows,
 } from "@/server/db/schema";
+import { GoogleDriveService } from "@/server/services/GoogleDriveService";
 import { TRPCError } from "@trpc/server";
 import { and, eq, inArray } from "drizzle-orm";
 import { type Session } from "next-auth";
@@ -118,5 +122,113 @@ export const taskConfigurationRouter = createTRPCRouter({
       });
 
       return configuration;
+    }),
+  createGoogleDriveListener: protectedProcedure
+    .input(googleDriveListenFilesAddedServerSchema)
+    .mutation(async ({ ctx, input: { taskId } }) => {
+      const connection = await getConnection(
+        ctx.session.user.id,
+        "Google Drive",
+      );
+
+      if (!connection) throw new TRPCError({ code: "NOT_FOUND" });
+
+      const [task] = await db
+        .select({
+          id: tasks.id,
+          configuration: tasks.configuration,
+          serviceName: services.name,
+          serviceMethod: services.method,
+        })
+        .from(tasks)
+        .leftJoin(workflows, eq(workflows.id, tasks.workflowId))
+        .leftJoin(services, eq(services.id, tasks.serviceId))
+        .where(
+          and(eq(tasks.id, taskId), eq(workflows.userId, ctx.session.user.id)),
+        );
+
+      if (
+        !task ||
+        task.serviceName !== "Google Drive" ||
+        task.serviceMethod !== "listenFilesAdded"
+      )
+        throw new TRPCError({ code: "NOT_FOUND" });
+
+      try {
+        const googleDriveService = new GoogleDriveService(connection);
+
+        await googleDriveService.init();
+
+        const startPageToken = await googleDriveService.getStartPageToken();
+
+        const configurationTask = task.configuration as
+          | TaskSpecificConfigurations["Google Drive"]["listenFilesAdded"]
+          | null;
+
+        const { id: channelId, resourceId } =
+          await googleDriveService.createOrUpdateListener(
+            startPageToken,
+            configurationTask?.channelId ?? undefined,
+          );
+
+        const configuration = {
+          channelId,
+          pageToken: startPageToken,
+          subscribed: true,
+          resourceId,
+        };
+
+        await updateTask(taskId, configuration);
+
+        return configuration;
+      } catch (error) {
+        console.log(error);
+
+        throw new TRPCError({ code: "CONFLICT" });
+      }
+    }),
+  deleteGoogleDriveListener: protectedProcedure
+    .input(googleDriveListenFilesAddedServerSchema)
+    .mutation(async ({ ctx, input: { taskId } }) => {
+      const connection = await getConnection(
+        ctx.session.user.id,
+        "Google Drive",
+      );
+
+      if (!connection) throw new TRPCError({ code: "NOT_FOUND" });
+
+      const [task] = await db
+        .select({ id: tasks.id, configuration: tasks.configuration })
+        .from(tasks)
+        .leftJoin(workflows, eq(workflows.id, tasks.workflowId))
+        .where(
+          and(eq(tasks.id, taskId), eq(workflows.userId, ctx.session.user.id)),
+        );
+
+      if (!task?.configuration) throw new TRPCError({ code: "NOT_FOUND" });
+
+      try {
+        const googleDriveService = new GoogleDriveService(connection);
+
+        await googleDriveService.init();
+
+        const { channelId, resourceId } =
+          task.configuration as TaskSpecificConfigurations["Google Drive"]["listenFilesAdded"];
+
+        await googleDriveService.deleteListener(channelId, resourceId);
+
+        await updateTask(taskId, null!);
+
+        return {
+          channelId: null,
+          pageToken: null,
+          subscribed: null,
+          resourceId: null,
+        };
+      } catch (error) {
+        console.log(error);
+
+        throw new TRPCError({ code: "CONFLICT" });
+      }
     }),
 });
