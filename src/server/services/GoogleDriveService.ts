@@ -81,7 +81,7 @@ export class GoogleDriveService extends ExternalService {
         kind: "api#channel",
         id: channelId, // Identificador único del canal
         type: "web_hook",
-        address: `https://6ef6-2800-200-f488-914a-e43e-f4a-aedb-462a.ngrok-free.app/api/notifications/drive`, // URL pública
+        address: `https://95d9-2800-200-f488-914a-fc91-7520-c7-2742.ngrok-free.app/api/notifications/drive`, // URL pública
       },
       { headers: { Authorization: `Bearer ${this.connection.accessToken}` } },
     );

@@ -111,4 +111,10 @@ const ServicesSpecificConfigurations = {
   "Manual Trigger": {
     clickButton: ManualTriggerClickButton,
   },
+  Notion: {
+    addBlock: () => <div>hola</div>,
+  },
+  Slack: {
+    postMessage: () => <div>hola</div>,
+  },
 } as unknown as ServicesMethods<(props: { task: unknown }) => JSX.Element>;
