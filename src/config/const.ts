@@ -74,7 +74,7 @@ export const LINKS_CONNECTIONS = {
 
   Discord: `https://discord.com/oauth2/authorize?response_type=code&client_id=${env.NEXT_PUBLIC_DISCORD_CLIENT_ID}&redirect_uri=${encodeURIComponent(env.NEXT_PUBLIC_BASE_URL + "/api/connections/callback/discord")}&scope=guilds+bot&permissions=52224`,
 
-  Slack: `https://slack.com/oauth/v2/authorize?client_id=${env.NEXT_PUBLIC_SLACK_CLIENT_ID}&scope=chat:write,channels:read,groups:read,mpim:read,im:read&user_scope=chat:write,channels:read,groups:read,mpim:read,im:read&redirect_uri=${encodeURIComponent(/*env.NEXT_PUBLIC_BASE_URL*/ "https://localhost:3000" + "/api/connections/callback/slack")}`,
+  Slack: `https://slack.com/oauth/v2/authorize?client_id=${env.NEXT_PUBLIC_SLACK_CLIENT_ID}&scope=chat:write,channels:read,groups:read,mpim:read,im:read&user_scope=chat:write,channels:read,groups:read,mpim:read,im:read&redirect_uri=${encodeURIComponent(env.NEXT_PUBLIC_BASE_URL + "/api/connections/callback/slack")}`,
 
   Notion: `https://slack.com/oauth/v2/authorize?client_id=${env.NEXT_PUBLIC_SLACK_CLIENT_ID}&scope=chat:write,channels:read,groups:read,mpim:read,im:read&user_scope=chat:write,channels:read,groups:read,mpim:read,im:read&redirect_uri=${encodeURIComponent(env.NEXT_PUBLIC_BASE_URL + "/api/connections/callback/slack")}`,
 } as Record<keyof ServicesMethods, string>;
