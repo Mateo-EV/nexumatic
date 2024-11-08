@@ -52,6 +52,8 @@ export async function deleteManyTasks(
       { keys: [], tasksIds: [] },
     );
 
+    console.log(keys, tasksIds);
+
     await utapi.deleteFiles(keys);
 
     await tx.delete(tasks).where(inArray(tasks.id, tasksIds));
