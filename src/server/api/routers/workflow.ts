@@ -50,7 +50,7 @@ export const workflowRouter = createTRPCRouter({
           },
         });
 
-        await deleteManyTasks(tasksFromWorkflow);
+        await deleteManyTasks(tasksFromWorkflow, tx);
 
         const [workflowDeleted] = await ctx.db
           .delete(workflows)
