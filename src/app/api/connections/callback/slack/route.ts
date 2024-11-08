@@ -1,12 +1,12 @@
-import { LINKS_CONNECTIONS } from "@/config/const";
 import { env } from "@/env";
+import { saveConnection } from "@/server/db/data";
 import { getSession } from "@/server/session";
 import axios from "axios";
 import { type NextRequest } from "next/server";
 
 interface SlackApiResponse {
   app_id: string;
-  auth_user: {
+  authed_user: {
     id: string;
     access_token: string;
   };
@@ -16,6 +16,7 @@ interface SlackApiResponse {
     id: string;
     name: string;
   };
+  ok?: boolean;
 }
 
 export async function GET(req: NextRequest) {
@@ -32,17 +33,28 @@ export async function GET(req: NextRequest) {
       return new Response("Code not provided", { status: 400 });
     }
 
-    const {
-      data: { access_token },
-    } = await axios.post<SlackApiResponse>(
+    const response = await axios.post<SlackApiResponse>(
       "https://slack.com/api/oauth.v2.access",
       new URLSearchParams({
         code,
         client_id: env.NEXT_PUBLIC_SLACK_CLIENT_ID,
         client_secret: env.SLACK_CLIENT_SECRET,
-        redirect_uri: LINKS_CONNECTIONS.Slack,
+        redirect_uri:
+          env.NEXT_PUBLIC_BASE_URL + "/api/connections/callback/slack",
       }),
     );
+
+    if (!response.data.ok) {
+      console.log(response.data);
+      throw new Error("");
+    }
+
+    await saveConnection({
+      service: { name: "Slack", method: "postMessage" },
+      access_token: response.data.authed_user.access_token,
+    });
+
+    return Response.redirect(`${env.NEXT_PUBLIC_BASE_URL}/connections`);
   } catch (error) {
     if (axios.isAxiosError(error)) {
       console.log(error.response?.data);

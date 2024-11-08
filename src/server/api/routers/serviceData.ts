@@ -4,6 +4,7 @@ import { TRPCError } from "@trpc/server";
 import { revalidateTag } from "next/cache";
 import { string } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
+import { SlackService } from "@/server/services/SlackService";
 
 export const serviceDataRouter = createTRPCRouter({
   discordGuilds: protectedProcedure.query(async ({ ctx }) => {
@@ -40,5 +41,20 @@ export const serviceDataRouter = createTRPCRouter({
     }),
   restartDiscordData: protectedProcedure.mutation(({ ctx }) => {
     revalidateTag(`common_guilds-${ctx.session.user.id}`);
+  }),
+  slackChannels: protectedProcedure.query(async ({ ctx }) => {
+    const connection = await getConnection(ctx.session.user.id, "Slack");
+
+    if (!connection) throw new TRPCError({ code: "NOT_FOUND" });
+
+    try {
+      const slackService = new SlackService(connection);
+
+      const channels = await slackService.getChannels();
+
+      return channels;
+    } catch {
+      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+    }
   }),
 });

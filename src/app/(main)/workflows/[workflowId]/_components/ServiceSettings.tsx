@@ -9,6 +9,7 @@ import { ConfigurationSkeleton } from "./configuration/ConfigurationSkeleton";
 import { DiscordPostMessage } from "./configuration/DiscordPostMessage";
 import { ManualTriggerClickButton } from "./configuration/ManualTriggerClickButton";
 import { GoogleDriveListeningFiles } from "./configuration/GoogleDriveListeningFiles";
+import { SlackPostMessage } from "./configuration/SlackPostMessage";
 
 export const ServiceSettings = ({ data }: { data: NodeData }) => {
   const {
@@ -115,6 +116,6 @@ const ServicesSpecificConfigurations = {
     addBlock: () => <div>hola</div>,
   },
   Slack: {
-    postMessage: () => <div>hola</div>,
+    postMessage: SlackPostMessage,
   },
 } as unknown as ServicesMethods<(props: { task: unknown }) => JSX.Element>;

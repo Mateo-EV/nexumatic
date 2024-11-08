@@ -51,8 +51,8 @@ export async function saveConnection({
 }: {
   service: { name: Service["name"]; method: Service["method"] };
   access_token: string;
-  refresh_token: string;
-  expires_in: number;
+  refresh_token?: string;
+  expires_in?: number;
 }) {
   const session = (await getSession())!;
 
@@ -73,7 +73,7 @@ export async function saveConnection({
       userId: session.user.id,
       accessToken: access_token,
       refreshToken: refresh_token,
-      expiresAt: formatExpiresAt(expires_in),
+      expiresAt: expires_in ? formatExpiresAt(expires_in) : null,
     })
     .onConflictDoUpdate({
       target: [connections.userId, connections.serviceId],

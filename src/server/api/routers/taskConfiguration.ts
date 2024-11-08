@@ -2,6 +2,7 @@ import {
   discordPostMessageConfigServerSchema,
   googleDriveListenFilesAddedServerSchema,
   manualTriggerClickButtonConfigServerSchema,
+  slackPostMessageConfigServerSchema,
 } from "@/lib/validators/server";
 import { db } from "@/server/db";
 import { getConnection } from "@/server/db/data";
@@ -230,5 +231,59 @@ export const taskConfigurationRouter = createTRPCRouter({
 
         throw new TRPCError({ code: "CONFLICT" });
       }
+    }),
+  updateSlackPostMessageConfiguration: protectedProcedure
+    .input(slackPostMessageConfigServerSchema)
+    .mutation(async ({ ctx, input: { taskId, configuration } }) => {
+      const taskConfigCanBeUpdated = await taskCanBeUpdated({
+        session: ctx.session,
+        taskId,
+        service: { name: "Slack", method: "postMessage" },
+      });
+
+      if (!taskConfigCanBeUpdated) throw new TRPCError({ code: "FORBIDDEN" });
+
+      let blocks: TaskSpecificConfigurations["Slack"]["postMessage"]["blocks"] =
+        undefined;
+
+      if (configuration.blocks && configuration.blocks.length > 0) {
+        const filesData = await ctx.db
+          .select({
+            url: taskFiles.fileUrl,
+            name: taskFiles.fileName,
+            type: taskFiles.fileType,
+          })
+          .from(taskFiles)
+          .where(
+            inArray(
+              taskFiles.id,
+              configuration.blocks.map((f) => f.fileId),
+            ),
+          );
+
+        blocks = filesData.map(({ url, name, type }) => {
+          if (type.startsWith("image")) {
+            return { type: "image", image_url: url, alt_text: name };
+          } else {
+            return {
+              type: "section",
+              text: {
+                type: "mrkdwn",
+                text: `${name} <${url}|Download File>`,
+              },
+            };
+          }
+        });
+      }
+
+      const fileIds = configuration.blocks?.map((e) => e.fileId);
+
+      await updateTask(taskId, {
+        ...configuration,
+        blocks,
+        fileIds,
+      });
+
+      return { ...configuration, fileIds };
     }),
 });

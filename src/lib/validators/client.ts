@@ -7,3 +7,9 @@ export const discordPostMessageConfigClientSchema = object({
   channelId: string(),
   includeFiles: boolean(),
 });
+
+export const slackPostMessageConfigClientSchema = object({
+  text: string().min(1, "Message required"),
+  channelId: string(),
+  includeFiles: boolean(),
+});

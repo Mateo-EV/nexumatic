@@ -27,6 +27,19 @@ export const discordPostMessageConfigServerSchema = object({
   }),
 });
 
+export const slackPostMessageConfigServerSchema = object({
+  taskId: string(),
+  configuration: object({
+    text: string().min(1, "Message required"),
+    blocks: array(
+      object({
+        fileId: number(),
+      }),
+    ).optional(),
+    channelId: string(),
+    includeFiles: boolean().optional(),
+  }),
+});
 export const googleDriveListenFilesAddedServerSchema = object({
   taskId: string(),
   configuration: object({}),

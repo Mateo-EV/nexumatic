@@ -299,8 +299,8 @@ export const connectionsRelations = relations(connections, ({ one }) => ({
 export type Connection = InferSelectModel<typeof connections>;
 
 type DiscordMessageData = {
-  content: string; // El mensaje en sí
-  tts?: boolean; // Si es un mensaje de texto a voz (opcional)
+  content: string;
+  tts?: boolean;
   embeds?: Array<
     | {
         image: { url: string };
@@ -329,12 +329,25 @@ export type TaskSpecificConfigurations = {
       content?: string;
     };
   };
+  Slack: {
+    postMessage: {
+      text: string;
+      channelId: string;
+      blocks?: Array<
+        | { type: "image"; image_url: string; alt_text: string }
+        | { type: "section"; text: { type: "mrkdwn"; text: string } }
+      >;
+      includeFiles?: boolean;
+      fileIds?: number[];
+    };
+  };
 };
 
 export type TaskConfiguration =
   | TaskSpecificConfigurations["Discord"]["postMessage"]
   | TaskSpecificConfigurations["Manual Trigger"]["clickButton"]
-  | TaskSpecificConfigurations["Google Drive"]["listenFilesAdded"];
+  | TaskSpecificConfigurations["Google Drive"]["listenFilesAdded"]
+  | TaskSpecificConfigurations["Slack"]["postMessage"];
 
 export const tasks = pgTable("tasks", {
   id: uuid("id").defaultRandom().primaryKey(),

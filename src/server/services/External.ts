@@ -67,21 +67,151 @@ export const ExternalServices = {
         externalFiles.forEach(({ blob, name }) =>
           form.append("file", blob, name),
         );
-        console.log(externalFiles);
       }
 
-      try {
+      await axios.post(
+        `https://discord.com/api/v10/channels/${configuration.channelId}/messages`,
+        form,
+        {
+          headers: {
+            Authorization: `Bot ${env.DISCORD_BOT_TOKEN}`,
+          },
+        },
+      );
+    },
+  },
+  Slack: {
+    postMessage: async ({
+      configuration,
+      configurationTasksData,
+      connection,
+      files,
+      externalFiles,
+    }: {
+      configurationTasksData: Record<string, string>;
+      connection: Connection;
+      configuration: TaskSpecificConfigurations["Slack"]["postMessage"];
+      files: TaskFile[];
+      externalFiles?: {
+        blob: Blob;
+        name: string;
+      }[];
+    }) => {
+      const isTextFromOtherTask =
+        configuration.text.startsWith("{{") &&
+        configuration.text.endsWith("}}");
+
+      const text = isTextFromOtherTask
+        ? configurationTasksData[configuration.text.slice(2, -2)]
+        : configuration.text;
+
+      let blocks = configuration.blocks;
+
+      if (blocks) {
+        blocks.push(
+          ...files.map(({ fileUrl, fileName, fileType }) => {
+            if (fileType.startsWith("image")) {
+              return {
+                type: "image" as const,
+                image_url: fileUrl,
+                alt_text: fileName,
+              } as const;
+            } else {
+              return {
+                type: "section",
+                text: {
+                  type: "mrkdwn",
+                  text: `${fileName} <${fileUrl}|Download File>`,
+                },
+              } as const;
+            }
+          }),
+        );
+      } else {
+        blocks = files.map(({ fileUrl, fileName, fileType }) => {
+          if (fileType.startsWith("image")) {
+            return { type: "image", image_url: fileUrl, alt_text: fileName };
+          } else {
+            return {
+              type: "section",
+              text: {
+                type: "mrkdwn",
+                text: `${fileName} <${fileUrl}|Download File>`,
+              },
+            };
+          }
+        });
+      }
+
+      if (blocks) {
+        blocks.unshift({
+          type: "section",
+          //@ts-expect-error sendMessage
+          text: { type: "plain_text", text: "Hello world" },
+        });
+      }
+
+      const { data } = await axios.post<{ ok: boolean }>(
+        "https://slack.com/api/chat.postMessage",
+        {
+          text: text ?? "",
+          channel: configuration.channelId,
+          blocks,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${connection.accessToken}`,
+          },
+        },
+      );
+
+      if (!data.ok) {
+        console.log(data);
+
+        throw new Error("Something went wrong");
+      }
+
+      if (configuration.includeFiles && externalFiles) {
+        const files = await Promise.all(
+          externalFiles.map(async ({ blob, name }) => {
+            const response = await axios.get<{
+              ok: boolean;
+              upload_url: string;
+              file_id: string;
+            }>("https://slack.com/api/files.getUploadURLExternal", {
+              headers: {
+                Authorization: `Bearer ${connection.accessToken}`,
+              },
+              params: {
+                filename: name,
+                length: blob.size,
+              },
+            });
+
+            if (response.data.ok) {
+              await axios.post(response.data.upload_url, blob, {
+                headers: {
+                  "Content-Type": "application/octet-stream",
+                },
+              });
+            }
+
+            return { id: response.data.file_id, title: name };
+          }),
+        );
+
         await axios.post(
-          `https://discord.com/api/v10/channels/${configuration.channelId}/messages`,
-          form,
+          "https://slack.com/api/files.completeUploadExternal",
+          {
+            files,
+            channel_id: configuration.channelId,
+          },
           {
             headers: {
-              Authorization: `Bot ${env.DISCORD_BOT_TOKEN}`,
+              Authorization: `Bearer ${connection.accessToken}`,
             },
           },
         );
-      } catch (error) {
-        console.log(error);
       }
     },
   },
