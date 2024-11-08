@@ -23,6 +23,7 @@ export const env = createEnv({
     SLACK_CLIENT_SECRET: z.string(),
     SLACK_APP_TOKEN: z.string(),
     SLACK_BOT_TOKEN: z.string(),
+    NOTION_CLIENT_SECRET: z.string(),
   },
 
   /**
@@ -35,6 +36,7 @@ export const env = createEnv({
     NEXT_PUBLIC_DISCORD_CLIENT_ID: z.string(),
     NEXT_PUBLIC_GOOGLE_CLIENT_ID: z.string(),
     NEXT_PUBLIC_SLACK_CLIENT_ID: z.string(),
+    NEXT_PUBLIC_NOTION_CLIENT_ID: z.string(),
   },
 
   /**
@@ -57,6 +59,8 @@ export const env = createEnv({
     SLACK_CLIENT_SECRET: process.env.SLACK_CLIENT_SECRET,
     SLACK_APP_TOKEN: process.env.SLACK_APP_TOKEN,
     SLACK_BOT_TOKEN: process.env.SLACK_BOT_TOKEN,
+    NOTION_CLIENT_SECRET: process.env.NOTION_CLIENT_SECRET,
+    NEXT_PUBLIC_NOTION_CLIENT_ID: process.env.NEXT_PUBLIC_NOTION_CLIENT_ID,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially

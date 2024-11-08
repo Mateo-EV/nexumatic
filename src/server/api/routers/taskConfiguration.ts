@@ -2,6 +2,7 @@ import {
   discordPostMessageConfigServerSchema,
   googleDriveListenFilesAddedServerSchema,
   manualTriggerClickButtonConfigServerSchema,
+  notionAddBlockConfigServerSchema,
   slackPostMessageConfigServerSchema,
 } from "@/lib/validators/server";
 import { db } from "@/server/db";
@@ -285,5 +286,48 @@ export const taskConfigurationRouter = createTRPCRouter({
       });
 
       return { ...configuration, fileIds };
+    }),
+  updateNotionAddBlockConfiguration: protectedProcedure
+    .input(notionAddBlockConfigServerSchema)
+    .mutation(async ({ ctx, input: { taskId, configuration } }) => {
+      const taskConfigCanBeUpdated = await taskCanBeUpdated({
+        session: ctx.session,
+        taskId,
+        service: { name: "Notion", method: "addBlock" },
+      });
+
+      if (!taskConfigCanBeUpdated) throw new TRPCError({ code: "FORBIDDEN" });
+
+      let imageUrls: TaskSpecificConfigurations["Notion"]["addBlock"]["imageUrls"] =
+        undefined;
+
+      if (configuration.imageIds && configuration.imageIds.length > 0) {
+        const filesData = await ctx.db
+          .select({
+            url: taskFiles.fileUrl,
+            name: taskFiles.fileName,
+            type: taskFiles.fileType,
+          })
+          .from(taskFiles)
+          .where(inArray(taskFiles.id, configuration.imageIds));
+
+        imageUrls = filesData.map(({ url, name, type }) => ({
+          type: type.startsWith("image") ? "image" : "file",
+          url,
+          name,
+        }));
+      }
+
+      const newConfig = {
+        content: configuration.content,
+        pageId: configuration.pageId,
+        databaseId: configuration.databaseId,
+        imageUrls,
+        fileIds: configuration.imageIds,
+      };
+
+      await updateTask(taskId, newConfig);
+
+      return newConfig;
     }),
 });

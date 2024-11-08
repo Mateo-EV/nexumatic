@@ -13,3 +13,9 @@ export const slackPostMessageConfigClientSchema = object({
   channelId: string(),
   includeFiles: boolean(),
 });
+
+export const notionAddBlockConfigClientSchema = object({
+  content: string().min(1, "Message required"),
+  databaseId: string(),
+  pageId: string(),
+});

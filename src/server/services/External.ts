@@ -9,6 +9,8 @@ import {
   type TaskFile,
   type TaskSpecificConfigurations,
 } from "../db/schema";
+import { Client as NotionClient } from "@notionhq/client";
+import { type BlockObjectRequest } from "@notionhq/client/build/src/api-endpoints";
 
 export const ExternalServices = {
   Discord: {
@@ -213,6 +215,88 @@ export const ExternalServices = {
           },
         );
       }
+    },
+  },
+  Notion: {
+    addBlock: async ({
+      configuration,
+      configurationTasksData,
+      connection,
+      files,
+    }: {
+      configurationTasksData: Record<string, string>;
+      connection: Connection;
+      configuration: TaskSpecificConfigurations["Notion"]["addBlock"];
+      files: TaskFile[];
+      externalFiles?: {
+        blob: Blob;
+        name: string;
+      }[];
+    }) => {
+      const isTextFromOtherTask =
+        configuration.content.startsWith("{{") &&
+        configuration.content.endsWith("}}");
+
+      const text = isTextFromOtherTask
+        ? configurationTasksData[configuration.content.slice(2, -2)]
+        : configuration.content;
+
+      const blocks: BlockObjectRequest[] = [];
+
+      if (text) {
+        blocks.push({
+          object: "block",
+          type: "paragraph",
+          paragraph: {
+            rich_text: [
+              {
+                type: "text",
+                text: {
+                  content: text,
+                },
+              },
+            ],
+          },
+        });
+      }
+
+      blocks.push(
+        ...files.map(({ fileUrl, fileName, fileType }) => {
+          if (fileType.startsWith("image")) {
+            return {
+              object: "block",
+              type: "image",
+              image: {
+                type: "external",
+                external: {
+                  url: fileUrl,
+                },
+              },
+            } as const;
+          } else {
+            return {
+              object: "block",
+              type: "file",
+              file: {
+                type: "external",
+                external: {
+                  url: fileUrl,
+                },
+                name: fileName,
+              },
+            } as const;
+          }
+        }),
+      );
+
+      const notion = new NotionClient({
+        auth: connection.accessToken!,
+      });
+
+      await notion.blocks.children.append({
+        block_id: configuration.pageId,
+        children: blocks,
+      });
     },
   },
 } as ServicesMethods<

@@ -341,12 +341,26 @@ export type TaskSpecificConfigurations = {
       fileIds?: number[];
     };
   };
+  Notion: {
+    addBlock: {
+      content: string;
+      pageId: string;
+      databaseId: string;
+      imageUrls?: {
+        type: "image" | "file";
+        url: string;
+        name: string;
+      }[];
+      fileIds?: number[];
+    };
+  };
 };
 
 export type TaskConfiguration =
   | TaskSpecificConfigurations["Discord"]["postMessage"]
   | TaskSpecificConfigurations["Manual Trigger"]["clickButton"]
   | TaskSpecificConfigurations["Google Drive"]["listenFilesAdded"]
+  | TaskSpecificConfigurations["Notion"]["addBlock"]
   | TaskSpecificConfigurations["Slack"]["postMessage"];
 
 export const tasks = pgTable("tasks", {

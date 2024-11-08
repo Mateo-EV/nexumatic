@@ -40,6 +40,17 @@ export const slackPostMessageConfigServerSchema = object({
     includeFiles: boolean().optional(),
   }),
 });
+
+export const notionAddBlockConfigServerSchema = object({
+  taskId: string(),
+  configuration: object({
+    content: string().min(1, "Message required"),
+    imageIds: array(number()).optional(),
+    pageId: string(),
+    databaseId: string(),
+  }),
+});
+
 export const googleDriveListenFilesAddedServerSchema = object({
   taskId: string(),
   configuration: object({}),

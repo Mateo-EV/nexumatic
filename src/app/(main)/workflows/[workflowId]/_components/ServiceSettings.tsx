@@ -10,6 +10,7 @@ import { DiscordPostMessage } from "./configuration/DiscordPostMessage";
 import { ManualTriggerClickButton } from "./configuration/ManualTriggerClickButton";
 import { GoogleDriveListeningFiles } from "./configuration/GoogleDriveListeningFiles";
 import { SlackPostMessage } from "./configuration/SlackPostMessage";
+import { NotionAddBlock } from "./configuration/NotionAddBlock";
 
 export const ServiceSettings = ({ data }: { data: NodeData }) => {
   const {
@@ -113,7 +114,7 @@ const ServicesSpecificConfigurations = {
     clickButton: ManualTriggerClickButton,
   },
   Notion: {
-    addBlock: () => <div>hola</div>,
+    addBlock: NotionAddBlock,
   },
   Slack: {
     postMessage: SlackPostMessage,
