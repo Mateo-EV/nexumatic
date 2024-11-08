@@ -100,7 +100,8 @@ export const manageWorkflowRouter = createTRPCRouter({
             (t) => !Boolean(tasksFromClientIndexed[t.id]),
           );
 
-          await deleteManyTasks(tasksMustBeDeleted);
+          await deleteManyTasks(tasksMustBeDeleted, tx);
+          console.log("delete tasks");
 
           const tasksInDbIndexed = tasksInDB.reduce<
             Record<string, (typeof tasksInDB)[number]>

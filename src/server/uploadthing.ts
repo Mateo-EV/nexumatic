@@ -1,22 +1,12 @@
-import { eq, inArray } from "drizzle-orm";
+/* eslint-disable @typescript-eslint/consistent-type-imports */
+import { env } from "@/env";
+import { eq, ExtractTablesWithRelations, inArray } from "drizzle-orm";
+import { NeonQueryResultHKT } from "drizzle-orm/neon-serverless";
+import { PgTransaction } from "drizzle-orm/pg-core";
 import "server-only";
 import { UTApi } from "uploadthing/server";
 import { db } from "./db";
-import {
-  connections,
-  type Service,
-  type Task,
-  TaskConfiguration,
-  type TaskFile,
-  taskFiles,
-  tasks,
-  TaskSpecificConfigurations,
-} from "./db/schema";
-import { env } from "@/env";
-import { getSession } from "./session";
-import { getConnection } from "./db/data";
-import { GoogleDriveService } from "./services/GoogleDriveService";
-import { TRPCError } from "@trpc/server";
+import { type Task, type TaskFile, taskFiles, tasks } from "./db/schema";
 
 export const utapi = new UTApi({ token: env.UPLOADTHING_TOKEN });
 
@@ -33,10 +23,17 @@ export const deleteFile = (fileId: number) => {
 
 export async function deleteManyTasks(
   tasksClient: (Task & { files: TaskFile[] })[],
+  dbs: PgTransaction<
+    NeonQueryResultHKT,
+    typeof import("d:/nextjs/nexumatic/src/server/db/schema"),
+    ExtractTablesWithRelations<
+      typeof import("d:/nextjs/nexumatic/src/server/db/schema")
+    >
+  >,
 ) {
   if (tasksClient.length === 0) return;
 
-  return await db.transaction(async (tx) => {
+  return await dbs.transaction(async (tx) => {
     const { keys, tasksIds } = tasksClient.reduce<{
       keys: string[];
       tasksIds: string[];
@@ -54,7 +51,9 @@ export async function deleteManyTasks(
 
     console.log(keys, tasksIds);
 
-    await utapi.deleteFiles(keys);
+    if (keys.length > 0) {
+      await utapi.deleteFiles(keys);
+    }
 
     await tx.delete(tasks).where(inArray(tasks.id, tasksIds));
   });
