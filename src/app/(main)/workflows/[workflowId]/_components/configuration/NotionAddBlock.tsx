@@ -47,7 +47,6 @@ export const NotionAddBlock = ({ task }: NotionAddBlockProps) => {
     defaultValues: {
       content: task.configuration.content ?? "",
       pageId: task.configuration.pageId ?? "",
-      databaseId: task.configuration.databaseId ?? "",
     },
   });
 
@@ -66,8 +65,8 @@ export const NotionAddBlock = ({ task }: NotionAddBlockProps) => {
       savedFiles: task.configuration.files,
     });
 
-  const { data: notionDatabases, isLoading: isLoadingNotionDatabases } =
-    api.serviceData.notionDatabases.useQuery(undefined, {
+  const { data: notionPages, isLoading: isLoadingNotionPages } =
+    api.serviceData.notionPages.useQuery(undefined, {
       retry: (count, error) => {
         if (error.data?.code === "NOT_FOUND") return false;
 
@@ -75,18 +74,10 @@ export const NotionAddBlock = ({ task }: NotionAddBlockProps) => {
       },
     });
 
-  const databaseIdChosen = form.watch("databaseId");
-
-  const { data: notionPages, isLoading: isLoadingNotionPages } =
-    api.serviceData.notionPages.useQuery(databaseIdChosen, {
-      enabled: Boolean(notionDatabases) && databaseIdChosen !== "",
-    });
-
-  const onSubmit = form.handleSubmit(({ content, pageId, databaseId }) => {
+  const onSubmit = form.handleSubmit(({ content, pageId }) => {
     updateConfiguration({
       content,
       pageId,
-      databaseId,
       imageIds: extraFiles,
     });
 
@@ -94,11 +85,11 @@ export const NotionAddBlock = ({ task }: NotionAddBlockProps) => {
   });
 
   const DiscordForm = () => {
-    if (isLoadingNotionDatabases) {
+    if (isLoadingNotionPages) {
       return <LoadingSpinner className="mx-auto size-6 text-primary" />;
     }
 
-    if (!notionDatabases)
+    if (!notionPages)
       return (
         <ConnectionButton serviceName="Notion" className="block text-center" />
       );
@@ -107,18 +98,18 @@ export const NotionAddBlock = ({ task }: NotionAddBlockProps) => {
       <>
         <FormField
           control={form.control}
-          name="databaseId"
+          name="pageId"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Database</FormLabel>
+              <FormLabel>Page</FormLabel>
               <Select onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select a database" />
+                    <SelectValue placeholder="Select a page" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {notionDatabases.map(({ id, name }) => (
+                  {notionPages.map(({ id, name }) => (
                     <SelectItem key={id} value={id}>
                       {name}
                     </SelectItem>
@@ -130,48 +121,12 @@ export const NotionAddBlock = ({ task }: NotionAddBlockProps) => {
           )}
         />
 
-        {isLoadingNotionPages ? (
-          <LoadingSpinner className="mx-auto size-6 text-primary" />
-        ) : (
-          notionPages && (
-            <>
-              <FormField
-                control={form.control}
-                name="pageId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Page</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a page" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {notionPages.map(({ id, name }) => (
-                          <SelectItem key={id} value={id}>
-                            {name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <SubmitButton
-                isSubmitting={isUpdatingConfiguration || isUploadingFileToTask}
-                type="submit"
-              >
-                Save
-              </SubmitButton>
-            </>
-          )
-        )}
+        <SubmitButton
+          isSubmitting={isUpdatingConfiguration || isUploadingFileToTask}
+          type="submit"
+        >
+          Save
+        </SubmitButton>
       </>
     );
   };

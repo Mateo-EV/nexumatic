@@ -101,7 +101,6 @@ export const manageWorkflowRouter = createTRPCRouter({
           );
 
           await deleteManyTasks(tasksMustBeDeleted, tx);
-          console.log("delete tasks");
 
           const tasksInDbIndexed = tasksInDB.reduce<
             Record<string, (typeof tasksInDB)[number]>
@@ -152,11 +151,14 @@ export const manageWorkflowRouter = createTRPCRouter({
             const finalX = sql.join(sqlPositionX, sql.raw(" "));
             const finalY = sql.join(sqlPositionY, sql.raw(" "));
 
-            savedTasks = await tx
+            await tx
               .update(tasks)
               .set({ positionX: finalX, positionY: finalY })
-              .where(inArray(tasks.id, taskExistingIds))
-              .returning();
+              .where(inArray(tasks.id, taskExistingIds));
+
+            savedTasks = existingTasks.map(
+              ({ tempId }) => tasksInDbIndexed[tempId]!,
+            );
           }
 
           if (nonExistingTasks.length > 0) {

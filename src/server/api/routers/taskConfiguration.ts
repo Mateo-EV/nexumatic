@@ -321,7 +321,6 @@ export const taskConfigurationRouter = createTRPCRouter({
       const newConfig = {
         content: configuration.content,
         pageId: configuration.pageId,
-        databaseId: configuration.databaseId,
         imageUrls,
         fileIds: configuration.imageIds,
       };

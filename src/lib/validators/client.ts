@@ -16,6 +16,5 @@ export const slackPostMessageConfigClientSchema = object({
 
 export const notionAddBlockConfigClientSchema = object({
   content: string().min(1, "Message required"),
-  databaseId: string(),
   pageId: string(),
 });

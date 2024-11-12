@@ -58,39 +58,39 @@ export const serviceDataRouter = createTRPCRouter({
       throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
     }
   }),
-  notionPages: protectedProcedure
-    .input(string())
-    .query(async ({ ctx, input: databaseId }) => {
-      const connection = await getConnection(ctx.session.user.id, "Notion");
+  // notionPages: protectedProcedure
+  //   .input(string())
+  //   .query(async ({ ctx, input: databaseId }) => {
+  //     const connection = await getConnection(ctx.session.user.id, "Notion");
 
-      if (!connection) throw new TRPCError({ code: "NOT_FOUND" });
+  //     if (!connection) throw new TRPCError({ code: "NOT_FOUND" });
 
-      const notion = new NotionClient({
-        auth: connection.accessToken!,
-      });
+  //     const notion = new NotionClient({
+  //       auth: connection.accessToken!,
+  //     });
 
-      const notionResult = await notion.databases.query({
-        database_id: databaseId,
-      });
+  //     const notionResult = await notion.databases.query({
+  //       database_id: databaseId,
+  //     });
 
-      console.log(notionResult.results);
+  //     console.log(notionResult.results);
 
-      const results = notionResult.results as {
-        id: string;
-        icon?: { emoji?: string };
-        properties?: { Name?: { title?: { plain_text: string }[] } };
-      }[];
+  //     const results = notionResult.results as {
+  //       id: string;
+  //       icon?: { emoji?: string };
+  //       properties?: { Name?: { title?: { plain_text: string }[] } };
+  //     }[];
 
-      return results.map((data) => ({
-        id: data.id,
-        name: data.icon?.emoji
-          ? data.icon.emoji +
-            " " +
-            data.properties?.Name?.title?.[0]?.plain_text
-          : data.properties?.Name?.title?.[0]?.plain_text,
-      }));
-    }),
-  notionDatabases: protectedProcedure.query(async ({ ctx }) => {
+  //     return results.map((data) => ({
+  //       id: data.id,
+  //       name: data.icon?.emoji
+  //         ? data.icon.emoji +
+  //           " " +
+  //           data.properties?.Name?.title?.[0]?.plain_text
+  //         : data.properties?.Name?.title?.[0]?.plain_text,
+  //     }));
+  //   }),
+  notionPages: protectedProcedure.query(async ({ ctx }) => {
     const connection = await getConnection(ctx.session.user.id, "Notion");
 
     if (!connection) throw new TRPCError({ code: "NOT_FOUND" });
@@ -101,7 +101,7 @@ export const serviceDataRouter = createTRPCRouter({
 
     const notionResult = await notion.search({
       filter: {
-        value: "database",
+        value: "page",
         property: "object",
       },
       sort: {
@@ -113,14 +113,23 @@ export const serviceDataRouter = createTRPCRouter({
     const results = notionResult.results as {
       id: string;
       icon?: { emoji?: string };
-      title: { plain_text: string }[];
+      properties?: {
+        Name?: { title?: { plain_text: string }[] };
+        title: { title: { text: { content: string } }[] };
+      };
     }[];
 
-    return results.map((data) => ({
-      id: data.id,
-      name: data.icon?.emoji
-        ? data.icon.emoji + " " + data.title[0]!.plain_text
-        : data.title[0]!.plain_text,
-    }));
+    return results.map((data) => {
+      let name = data.icon?.emoji ? data.icon.emoji + " " : "";
+
+      name +=
+        data.properties?.Name?.title?.[0]?.plain_text ??
+        data.properties?.title?.title[0]?.text.content;
+
+      return {
+        id: data.id,
+        name,
+      };
+    });
   }),
 });

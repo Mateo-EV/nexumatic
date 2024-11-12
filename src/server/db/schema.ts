@@ -345,7 +345,6 @@ export type TaskSpecificConfigurations = {
     addBlock: {
       content: string;
       pageId: string;
-      databaseId: string;
       imageUrls?: {
         type: "image" | "file";
         url: string;

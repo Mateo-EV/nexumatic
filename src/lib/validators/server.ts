@@ -47,7 +47,6 @@ export const notionAddBlockConfigServerSchema = object({
     content: string().min(1, "Message required"),
     imageIds: array(number()).optional(),
     pageId: string(),
-    databaseId: string(),
   }),
 });
 

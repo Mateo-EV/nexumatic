@@ -261,8 +261,37 @@ export const ExternalServices = {
       }
 
       blocks.push(
+        ...(configuration.imageUrls?.map(({ name, type, url }) => {
+          if (false) {
+            return {
+              object: "block",
+              type: "image",
+              image: {
+                type: "external",
+                external: {
+                  url,
+                },
+              },
+            } as const;
+          } else {
+            return {
+              object: "block",
+              type: "file",
+              file: {
+                type: "external",
+                external: {
+                  url,
+                },
+                name,
+              },
+            } as const;
+          }
+        }) ?? []),
+      );
+
+      blocks.push(
         ...files.map(({ fileUrl, fileName, fileType }) => {
-          if (fileType.startsWith("image")) {
+          if (false) {
             return {
               object: "block",
               type: "image",
@@ -293,10 +322,14 @@ export const ExternalServices = {
         auth: connection.accessToken!,
       });
 
-      await notion.blocks.children.append({
+      console.log(blocks);
+
+      const data = await notion.blocks.children.append({
         block_id: configuration.pageId,
         children: blocks,
       });
+
+      console.log(data);
     },
   },
 } as ServicesMethods<
