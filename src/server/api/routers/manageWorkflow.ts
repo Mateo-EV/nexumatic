@@ -271,29 +271,16 @@ export const manageWorkflowRouter = createTRPCRouter({
         .set({ isRunning: true })
         .where(eq(workflows.id, workflowId));
 
-      const [workflowRunId] = await ctx.db
-        .insert(workflowRuns)
-        .values({
-          workflowId,
-          status: "in_progress",
-        })
-        .returning({ id: workflowRuns.id });
-
       const workflowService = new WorkflowService(workflow);
 
       workflowService.setUserId(ctx.session.user.id);
 
       try {
-        await workflowService.executeWorkflow(workflowRunId!.id);
+        await workflowService.executeWorkflow();
       } catch (error) {
         if (error instanceof WorkFlowServiceError) {
           throw new TRPCError({ code: "CONFLICT", message: error.message });
         }
-      } finally {
-        await db
-          .update(workflowRuns)
-          .set({ status: "completed" })
-          .where(eq(workflowRuns.id, workflowRunId!.id));
       }
 
       await ctx.db

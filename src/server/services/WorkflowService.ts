@@ -14,6 +14,7 @@ import {
   tasks,
   type TaskSpecificConfigurations,
   type WorkFlow,
+  workflowRuns,
 } from "../db/schema";
 import { ExternalServices } from "./External";
 import { LogMessageService } from "@/config/const";
@@ -231,9 +232,18 @@ export class WorkflowService {
     }
   };
 
-  public async executeWorkflow(workflowRunId: number) {
-    this.workflowRunId = workflowRunId;
+  public async executeWorkflow() {
     const { initialTrigger, tasks } = await this.getWorkflowData();
+
+    const [workflowRunId] = await db
+      .insert(workflowRuns)
+      .values({
+        workflowId: this.workflow.id,
+        status: "in_progress",
+      })
+      .returning({ id: workflowRuns.id });
+
+    this.workflowRunId = workflowRunId!.id;
 
     console.log("Iniciando Flujo de trabajo completado.");
 
@@ -264,6 +274,11 @@ export class WorkflowService {
     await continueTask();
 
     console.log("Flujo de trabajo completado.");
+
+    await db
+      .update(workflowRuns)
+      .set({ status: "completed", completed_at: new Date() })
+      .where(eq(workflowRuns.id, workflowRunId!.id));
   }
 
   public static validateDependencies(
