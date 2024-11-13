@@ -120,3 +120,28 @@ export const ServicesStringSelector = {
     clickButton: [{ name: "Manual content", value: "manual.content" }],
   },
 } as ServicesMethods<{ value: string; name: string }[]>;
+
+export const LogMessageService = {
+  Discord: {
+    postMessage: {
+      success: "Discord message sent successfully",
+      warning: "Try reconecting to your discord connection",
+      error: "Error while sending dicord message",
+    },
+  },
+  Notion: {
+    addBlock: {
+      success: "Notion block created successfully",
+      warning:
+        "Try reconecting to your notion connection or select an aproppiate page",
+      error: "Error while creating block in your notion page",
+    },
+  },
+  Slack: {
+    postMessage: {
+      success: "Slack message sent successfully",
+      warning: "Try reconecting to your slack notion",
+      error: "Error while sending slack message",
+    },
+  },
+} as ServicesMethods<{ success: string; error: string; warning: string }>;

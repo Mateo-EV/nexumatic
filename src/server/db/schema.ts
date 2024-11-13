@@ -496,14 +496,16 @@ export const workflowRunsRelations = relations(
 
 export type WorkflowRun = InferSelectModel<typeof workflowRuns>;
 
-export type TaskLogStatus = "in_progress" | "success" | "error";
+export type TaskLogStatus = "warning" | "success" | "error";
 
 export const taskLogs = pgTable("task_logs", {
   id: serial("id").primaryKey(),
-  workflowRunId: integer("workflow_run_id").references(() => workflowRuns.id, {
-    onDelete: "restrict",
-    onUpdate: "cascade",
-  }),
+  workflowRunId: integer("workflow_run_id")
+    .references(() => workflowRuns.id, {
+      onDelete: "cascade",
+      onUpdate: "cascade",
+    })
+    .notNull(),
   taskId: uuid("task_id")
     .notNull()
     .references(() => tasks.id, { onDelete: "cascade", onUpdate: "cascade" }),

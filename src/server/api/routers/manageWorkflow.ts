@@ -6,6 +6,7 @@ import {
   type TaskDependency,
   taskFiles,
   tasks,
+  workflowRuns,
   workflows,
 } from "@/server/db/schema";
 import {
@@ -17,6 +18,7 @@ import { and, eq, inArray, sql, type SQL } from "drizzle-orm";
 import { string } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
 import { deleteManyTasks } from "@/server/uploadthing";
+import { db } from "@/server/db";
 
 export const manageWorkflowRouter = createTRPCRouter({
   saveDataInWorkflow: protectedProcedure
@@ -269,16 +271,29 @@ export const manageWorkflowRouter = createTRPCRouter({
         .set({ isRunning: true })
         .where(eq(workflows.id, workflowId));
 
+      const [workflowRunId] = await ctx.db
+        .insert(workflowRuns)
+        .values({
+          workflowId,
+          status: "in_progress",
+        })
+        .returning({ id: workflowRuns.id });
+
       const workflowService = new WorkflowService(workflow);
 
       workflowService.setUserId(ctx.session.user.id);
 
       try {
-        await workflowService.executeWorkflow();
+        await workflowService.executeWorkflow(workflowRunId!.id);
       } catch (error) {
         if (error instanceof WorkFlowServiceError) {
           throw new TRPCError({ code: "CONFLICT", message: error.message });
         }
+      } finally {
+        await db
+          .update(workflowRuns)
+          .set({ status: "completed" })
+          .where(eq(workflowRuns.id, workflowRunId!.id));
       }
 
       await ctx.db

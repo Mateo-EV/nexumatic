@@ -10,11 +10,13 @@ import {
   type TaskConfiguration,
   type TaskFile,
   taskFiles,
+  taskLogs,
   tasks,
   type TaskSpecificConfigurations,
   type WorkFlow,
 } from "../db/schema";
 import { ExternalServices } from "./External";
+import { LogMessageService } from "@/config/const";
 
 const taskSelect = {
   id: tasks.id,
@@ -34,6 +36,7 @@ interface ExternalFile {
 export class WorkflowService {
   private workflow: WorkFlow;
   private userId: string = null!;
+  private workflowRunId: number = null!;
   private externalFiles: ExternalFile[] | undefined = undefined;
 
   constructor(workflow: WorkFlow, externalFiles?: ExternalFile[]) {
@@ -172,10 +175,9 @@ export class WorkflowService {
   private executeTask = async (
     task: Awaited<ReturnType<typeof this.getTasksWithDependencies>>[number],
   ) => {
+    const service = task.service;
+    const serviceExternal = ExternalServices[service.name];
     try {
-      const service = task.service;
-      const serviceExternal = ExternalServices[service.name];
-
       const methodToExecute = serviceExternal[service.method as never] as (t: {
         connection: Connection;
         configuration: TaskConfiguration;
@@ -191,12 +193,46 @@ export class WorkflowService {
         files: task.files,
         externalFiles: this.externalFiles,
       });
+
+      await db.insert(taskLogs).values({
+        logMessage: (
+          LogMessageService[service.name][
+            service.method as keyof (typeof LogMessageService)[typeof service.name]
+          ] as unknown as { success: string; error: string; warning: string }
+        ).success,
+        status: "success",
+        taskId: task.id,
+        workflowRunId: this.workflowRunId,
+      });
     } catch (error) {
       console.log(error);
+
+      await db.insert(taskLogs).values({
+        logMessage: (
+          LogMessageService[service.name][
+            service.method as keyof (typeof LogMessageService)[typeof service.name]
+          ] as unknown as { success: string; error: string; warning: string }
+        ).error,
+        status: "error",
+        taskId: task.id,
+        workflowRunId: this.workflowRunId,
+      });
+
+      await db.insert(taskLogs).values({
+        logMessage: (
+          LogMessageService[service.name][
+            service.method as keyof (typeof LogMessageService)[typeof service.name]
+          ] as unknown as { success: string; error: string; warning: string }
+        ).warning,
+        status: "warning",
+        taskId: task.id,
+        workflowRunId: this.workflowRunId,
+      });
     }
   };
 
-  public async executeWorkflow() {
+  public async executeWorkflow(workflowRunId: number) {
+    this.workflowRunId = workflowRunId;
     const { initialTrigger, tasks } = await this.getWorkflowData();
 
     console.log("Iniciando Flujo de trabajo completado.");

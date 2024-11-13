@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-empty-object-type */
 import { db } from "@/server/db";
 import { getConnection } from "@/server/db/data";
-import { workflows } from "@/server/db/schema";
+import { workflowRuns, workflows } from "@/server/db/schema";
 import { GoogleDriveService } from "@/server/services/GoogleDriveService";
 import { WorkflowService } from "@/server/services/WorkflowService";
 import axios from "axios";
@@ -113,6 +113,7 @@ const googleDriveNotificationSchema = object({
 
 export async function POST() {
   let workflowId: string | undefined = undefined;
+  let workflowRunId: number | undefined = undefined;
 
   try {
     const headerList = googleDriveNotificationSchema.parse(
@@ -133,6 +134,16 @@ export async function POST() {
       .update(workflows)
       .set({ isRunning: true })
       .where(eq(workflows.id, task.workflow.id));
+
+    const [workflowRun] = await db
+      .insert(workflowRuns)
+      .values({
+        workflowId,
+        status: "in_progress",
+      })
+      .returning({ id: workflowRuns.id });
+
+    workflowRunId = workflowRun!.id;
 
     const connection = await getConnection(
       task.workflow.user.id,
@@ -155,7 +166,7 @@ export async function POST() {
 
     workflowService.setUserId(task.workflow.user.id);
 
-    await workflowService.executeWorkflow();
+    await workflowService.executeWorkflow(workflowRunId);
 
     return Response.json(headerList);
   } catch (error) {
@@ -172,6 +183,13 @@ export async function POST() {
         .update(workflows)
         .set({ isRunning: false })
         .where(eq(workflows.id, workflowId));
+    }
+
+    if (workflowRunId) {
+      await db
+        .update(workflowRuns)
+        .set({ status: "completed" })
+        .where(eq(workflowRuns.id, workflowRunId));
     }
   }
 }
