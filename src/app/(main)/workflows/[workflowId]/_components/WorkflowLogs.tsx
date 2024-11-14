@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { api } from "@/trpc/react";
+import { usePathname } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type LogType = "info" | "warning" | "error";
 
@@ -10,6 +12,17 @@ interface LogEntry {
 }
 
 export const WorkflowLogs = () => {
+  const pathname = usePathname();
+  const workflowId = useMemo(
+    () => pathname.split("/").filter(Boolean).pop()!,
+    [pathname],
+  );
+
+  const { data, isLoading } = api.workflowLogs.getByWorkflow.useInfiniteQuery(
+    { workflowId },
+    { getNextPageParam: (lastPage) => lastPage.nextCursor },
+  );
+
   const [logs] = useState<LogEntry[]>([
     { type: "info", message: "Workflow initalizated" },
     { type: "warning", message: "There is a lack of data" },
@@ -22,6 +35,10 @@ export const WorkflowLogs = () => {
       terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
     }
   }, [logs]);
+
+  if (isLoading) return "Cargando";
+
+  const workflowRunsData = data?.pages.flatMap((page) => page.workflowRuns);
 
   const getLogColor = (type: LogType) => {
     switch (type) {

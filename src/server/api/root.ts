@@ -4,6 +4,7 @@ import { manageWorkflowRouter } from "./routers/manageWorkflow";
 import { connectionRouter } from "./routers/connection";
 import { taskConfigurationRouter } from "./routers/taskConfiguration";
 import { serviceDataRouter } from "./routers/serviceData";
+import { workflowLogsRouter } from "./routers/workflowLogs";
 
 /**
  * This is the primary router for your server.
@@ -16,6 +17,7 @@ export const appRouter = createTRPCRouter({
   connection: connectionRouter,
   taskConfiguration: taskConfigurationRouter,
   serviceData: serviceDataRouter,
+  workflowLogs: workflowLogsRouter,
 });
 
 // export type definition of API
