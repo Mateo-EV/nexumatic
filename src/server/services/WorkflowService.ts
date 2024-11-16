@@ -18,6 +18,8 @@ import {
 } from "../db/schema";
 import { ExternalServices } from "./External";
 import { LogMessageService } from "@/config/const";
+import { pusher } from "@/lib/pusher/server";
+import { eventManager } from "@/lib/utils";
 
 const taskSelect = {
   id: tasks.id,
@@ -39,6 +41,7 @@ export class WorkflowService {
   private userId: string = null!;
   private workflowRunId: number = null!;
   private externalFiles: ExternalFile[] | undefined = undefined;
+  private handleEvent: (cb: () => Promise<unknown>) => Promise<void> = null!;
 
   constructor(workflow: WorkFlow, externalFiles?: ExternalFile[]) {
     this.workflow = workflow;
@@ -178,6 +181,8 @@ export class WorkflowService {
   ) => {
     const service = task.service;
     const serviceExternal = ExternalServices[service.name];
+
+    let taskLogsResult: unknown[];
     try {
       const methodToExecute = serviceExternal[service.method as never] as (t: {
         connection: Connection;
@@ -195,55 +200,87 @@ export class WorkflowService {
         externalFiles: this.externalFiles,
       });
 
-      await db.insert(taskLogs).values({
-        logMessage: (
-          LogMessageService[service.name][
-            service.method as keyof (typeof LogMessageService)[typeof service.name]
-          ] as unknown as { success: string; error: string; warning: string }
-        ).success,
-        status: "success",
-        taskId: task.id,
-        workflowRunId: this.workflowRunId,
-      });
+      taskLogsResult = await db
+        .insert(taskLogs)
+        .values({
+          logMessage: (
+            LogMessageService[service.name][
+              service.method as keyof (typeof LogMessageService)[typeof service.name]
+            ] as unknown as { success: string; error: string; warning: string }
+          ).success,
+          status: "success",
+          taskId: task.id,
+          workflowRunId: this.workflowRunId,
+        })
+        .returning();
     } catch (error) {
       console.log(error);
 
-      await db.insert(taskLogs).values({
-        logMessage: (
-          LogMessageService[service.name][
-            service.method as keyof (typeof LogMessageService)[typeof service.name]
-          ] as unknown as { success: string; error: string; warning: string }
-        ).error,
-        status: "error",
-        taskId: task.id,
-        workflowRunId: this.workflowRunId,
-      });
-
-      await db.insert(taskLogs).values({
-        logMessage: (
-          LogMessageService[service.name][
-            service.method as keyof (typeof LogMessageService)[typeof service.name]
-          ] as unknown as { success: string; error: string; warning: string }
-        ).warning,
-        status: "warning",
-        taskId: task.id,
-        workflowRunId: this.workflowRunId,
-      });
+      taskLogsResult = await db
+        .insert(taskLogs)
+        .values([
+          {
+            logMessage: (
+              LogMessageService[service.name][
+                service.method as keyof (typeof LogMessageService)[typeof service.name]
+              ] as unknown as {
+                success: string;
+                error: string;
+                warning: string;
+              }
+            ).error,
+            status: "error",
+            taskId: task.id,
+            workflowRunId: this.workflowRunId,
+          },
+          {
+            logMessage: (
+              LogMessageService[service.name][
+                service.method as keyof (typeof LogMessageService)[typeof service.name]
+              ] as unknown as {
+                success: string;
+                error: string;
+                warning: string;
+              }
+            ).warning,
+            status: "warning",
+            taskId: task.id,
+            workflowRunId: this.workflowRunId,
+          },
+        ])
+        .returning();
+    } finally {
+      void this.handleEvent(() =>
+        pusher.trigger(
+          `workflow-${this.workflow.id}`,
+          "tak-log-created",
+          taskLogsResult,
+        ),
+      );
     }
   };
 
   public async executeWorkflow() {
     const { initialTrigger, tasks } = await this.getWorkflowData();
+    this.handleEvent = eventManager();
 
-    const [workflowRunId] = await db
+    const [workflowRun] = await db
       .insert(workflowRuns)
       .values({
         workflowId: this.workflow.id,
         status: "in_progress",
       })
-      .returning({ id: workflowRuns.id });
+      .returning();
 
-    this.workflowRunId = workflowRunId!.id;
+    this.workflowRunId = workflowRun!.id;
+    const CHANNEL_NAME = `workflows-execution-for-${this.userId}`;
+
+    void this.handleEvent(() =>
+      pusher.trigger(CHANNEL_NAME, "in-progress", {
+        workflowRun,
+        workflow: this.workflow,
+      }),
+    );
 
     console.log("Iniciando Flujo de trabajo completado.");
 
@@ -275,10 +312,23 @@ export class WorkflowService {
 
     console.log("Flujo de trabajo completado.");
 
+    const completed_at = new Date();
+
     await db
       .update(workflowRuns)
-      .set({ status: "completed", completed_at: new Date() })
-      .where(eq(workflowRuns.id, workflowRunId!.id));
+      .set({ status: "completed", completed_at })
+      .where(eq(workflowRuns.id, workflowRun!.id));
+
+    void this.handleEvent(() =>
+      pusher.trigger(CHANNEL_NAME, "completed", {
+        workflowRun: {
+          ...workflowRun,
+          status: "completed",
+          completed_at,
+        },
+        workflow: this.workflow,
+      }),
+    );
   }
 
   public static validateDependencies(

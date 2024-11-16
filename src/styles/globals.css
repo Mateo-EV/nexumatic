@@ -2,7 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -72,10 +71,10 @@
     position: relative;
     z-index: 0;
   }
-  
+
   .glow-on-hover::before {
-    content: '';
-    background: linear-gradient(45deg,#fff, hsla(var(--primary)), #fff);
+    content: "";
+    background: linear-gradient(45deg, #fff, hsla(var(--primary)), #fff);
     position: absolute;
     inset: -2px;
     background-size: 400%;
@@ -83,13 +82,13 @@
     filter: blur(5px);
     animation: glowing 20s linear infinite;
     opacity: 1;
-    transition: opacity .3s ease-in-out;
-    @apply rounded-md
+    transition: opacity 0.3s ease-in-out;
+    @apply rounded-md;
   }
 
   .dark .glow-on-hover::before {
-    content: '';
-    background: linear-gradient(45deg,#000, hsla(var(--primary)), #000);
+    content: "";
+    background: linear-gradient(45deg, #000, hsla(var(--primary)), #000);
     position: absolute;
     inset: -2px;
     background-size: 400%;
@@ -97,25 +96,36 @@
     filter: blur(5px);
     animation: glowing 20s linear infinite;
     opacity: 1;
-    transition: opacity .3s ease-in-out;
-    @apply rounded-md
+    transition: opacity 0.3s ease-in-out;
+    @apply rounded-md;
   }
-  
+
   .glow-on-hover::after {
     z-index: -1;
-    content: '';
+    content: "";
     position: absolute;
     width: 100%;
     height: 100%;
     background: hsla(var(--primary));
     left: 0;
     top: 0;
-    @apply rounded-md
+    @apply rounded-md;
   }
-  
+
   @keyframes glowing {
-    0% { background-position: 0 0; }
-    50% { background-position: 400% 0; }
-    100% { background-position: 0 0; }
+    0% {
+      background-position: 0 0;
+    }
+    50% {
+      background-position: 400% 0;
+    }
+    100% {
+      background-position: 0 0;
+    }
   }
+}
+
+.scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: hsla(var(--primary-foreground)) transparent;
 }

@@ -21,6 +21,7 @@ import { TRPCError } from "@trpc/server";
 import { and, eq, inArray } from "drizzle-orm";
 import { type Session } from "next-auth";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
+import { isAxiosError } from "axios";
 
 async function taskCanBeUpdated({
   session,
@@ -184,7 +185,11 @@ export const taskConfigurationRouter = createTRPCRouter({
 
         return configuration;
       } catch (error) {
-        console.log(error);
+        if (isAxiosError(error)) {
+          console.log(error.response?.data);
+        } else {
+          console.log(error);
+        }
 
         throw new TRPCError({ code: "CONFLICT" });
       }
@@ -217,7 +222,13 @@ export const taskConfigurationRouter = createTRPCRouter({
         const { channelId, resourceId } =
           task.configuration as TaskSpecificConfigurations["Google Drive"]["listenFilesAdded"];
 
-        await googleDriveService.deleteListener(channelId, resourceId);
+        try {
+          await googleDriveService.deleteListener(channelId, resourceId);
+        } catch (error) {
+          if (!isAxiosError(error) || error.status !== 404) {
+            throw new Error("Something bad happened");
+          }
+        }
 
         await updateTask(taskId, null!);
 
@@ -228,7 +239,11 @@ export const taskConfigurationRouter = createTRPCRouter({
           resourceId: null,
         };
       } catch (error) {
-        console.log(error);
+        if (isAxiosError(error)) {
+          console.log(error.response?.data);
+        } else {
+          console.log(error);
+        }
 
         throw new TRPCError({ code: "CONFLICT" });
       }

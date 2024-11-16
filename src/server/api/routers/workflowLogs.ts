@@ -4,7 +4,7 @@ import { and, desc, eq, lt } from "drizzle-orm";
 import { number, object, string } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
 
-const LIMIT_QUERY = 3;
+const LIMIT_QUERY = 20;
 
 export const workflowLogsRouter = createTRPCRouter({
   getByWorkflow: protectedProcedure

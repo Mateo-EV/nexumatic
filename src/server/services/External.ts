@@ -149,7 +149,7 @@ export const ExternalServices = {
         blocks.unshift({
           type: "section",
           //@ts-expect-error sendMessage
-          text: { type: "plain_text", text: "Hello world" },
+          text: { type: "plain_text", text },
         });
       }
 

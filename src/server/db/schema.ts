@@ -462,10 +462,12 @@ export type WorkFlowRunStatus = "in_progress" | "completed" | "incompleted";
 
 export const workflowRuns = pgTable("workflows_runs", {
   id: serial("id").primaryKey(),
-  workflowId: uuid("workflow_id").references(() => workflows.id, {
-    onDelete: "cascade",
-    onUpdate: "cascade",
-  }),
+  workflowId: uuid("workflow_id")
+    .references(() => workflows.id, {
+      onDelete: "cascade",
+      onUpdate: "cascade",
+    })
+    .notNull(),
   status: varchar("status", { length: 50 })
     .$type<WorkFlowRunStatus>()
     .notNull(),
@@ -506,9 +508,10 @@ export const taskLogs = pgTable("task_logs", {
       onUpdate: "cascade",
     })
     .notNull(),
-  taskId: uuid("task_id")
-    .notNull()
-    .references(() => tasks.id, { onDelete: "cascade", onUpdate: "cascade" }),
+  taskId: uuid("task_id").references(() => tasks.id, {
+    onDelete: "set null",
+    onUpdate: "cascade",
+  }),
   status: varchar("status", { length: 50 }).$type<TaskLogStatus>().notNull(),
   logMessage: text("log_message").notNull(),
   created_at: timestamp("created_at", {
