@@ -1,6 +1,8 @@
 import "server-only";
 
 import { env } from "@/env";
+import { Client as NotionClient } from "@notionhq/client";
+import { type BlockObjectRequest } from "@notionhq/client/build/src/api-endpoints";
 import axios from "axios";
 import {
   type Connection,
@@ -9,8 +11,6 @@ import {
   type TaskFile,
   type TaskSpecificConfigurations,
 } from "../db/schema";
-import { Client as NotionClient } from "@notionhq/client";
-import { type BlockObjectRequest } from "@notionhq/client/build/src/api-endpoints";
 
 export const ExternalServices = {
   Discord: {
@@ -261,7 +261,7 @@ export const ExternalServices = {
       }
 
       blocks.push(
-        ...(configuration.imageUrls?.map(({ name, type, url }) => {
+        ...(configuration.imageUrls?.map(({ name, url }) => {
           if (false) {
             return {
               object: "block",
@@ -290,7 +290,7 @@ export const ExternalServices = {
       );
 
       blocks.push(
-        ...files.map(({ fileUrl, fileName, fileType }) => {
+        ...files.map(({ fileUrl, fileName }) => {
           if (false) {
             return {
               object: "block",

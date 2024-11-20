@@ -1,7 +1,6 @@
 "use client";
 
 import { Icons } from "@/components/Icons";
-import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardDescription,

@@ -6,19 +6,17 @@ import {
   type TaskDependency,
   taskFiles,
   tasks,
-  workflowRuns,
   workflows,
 } from "@/server/db/schema";
 import {
   WorkflowService,
   WorkFlowServiceError,
 } from "@/server/services/WorkflowService";
+import { deleteManyTasks } from "@/server/uploadthing";
 import { TRPCError } from "@trpc/server";
 import { and, eq, inArray, sql, type SQL } from "drizzle-orm";
 import { string } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
-import { deleteManyTasks } from "@/server/uploadthing";
-import { db } from "@/server/db";
 
 export const manageWorkflowRouter = createTRPCRouter({
   saveDataInWorkflow: protectedProcedure
@@ -264,7 +262,8 @@ export const manageWorkflowRouter = createTRPCRouter({
 
       if (!workflow) throw new TRPCError({ code: "UNAUTHORIZED" });
 
-      if (workflow.isRunning) throw new TRPCError({ code: "BAD_REQUEST" });
+      if (workflow.isRunning || !workflow.isActive)
+        throw new TRPCError({ code: "BAD_REQUEST" });
 
       await ctx.db
         .update(workflows)

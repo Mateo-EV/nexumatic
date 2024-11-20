@@ -3,9 +3,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 
-type UsageSummaryProps = {};
+type UsageSummaryProps = {
+  monthlyExecutions: number;
+};
 
-export const UsageSummary = ({}: UsageSummaryProps) => {
+export const UsageSummary = ({ monthlyExecutions }: UsageSummaryProps) => {
   return (
     <Card>
       <CardHeader>
@@ -14,7 +16,7 @@ export const UsageSummary = ({}: UsageSummaryProps) => {
       <CardContent className="space-y-4">
         <div className="flex items-center justify-between">
           <span className="text-sm">Monthly executions</span>
-          <span className="text-xl font-bold">1,234</span>{" "}
+          <span className="text-xl font-bold">{monthlyExecutions}</span>{" "}
         </div>
         <Progress value={80} />
       </CardContent>

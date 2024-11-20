@@ -1,13 +1,9 @@
 import { env } from "@/env";
+import { saveConnection } from "@/server/db/data";
+import { getSession } from "@/server/session";
+import axios from "axios";
 import { type NextRequest } from "next/server";
 import { object, string } from "zod";
-import axios from "axios";
-import { db } from "@/server/db";
-import { connections, services } from "@/server/db/schema";
-import { and, eq, sql } from "drizzle-orm";
-import { getSession } from "@/server/session";
-import { formatExpiresAt } from "@/lib/utils";
-import { saveConnection } from "@/server/db/data";
 
 const discordSearchParamsSchema = object({
   code: string().min(1),

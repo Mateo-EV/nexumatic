@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-empty-object-type */
 import { db } from "@/server/db";
 import { getConnection } from "@/server/db/data";
-import { workflowRuns, workflows } from "@/server/db/schema";
+import { workflows } from "@/server/db/schema";
 import { GoogleDriveService } from "@/server/services/GoogleDriveService";
 import { WorkflowService } from "@/server/services/WorkflowService";
 import axios from "axios";
@@ -124,7 +124,11 @@ export async function POST() {
       with: { workflow: { with: { user: { columns: { id: true } } } } },
     });
 
-    if (!task?.configuration || task.workflow.isRunning)
+    if (
+      !task?.configuration ||
+      task.workflow.isRunning ||
+      !task.workflow.isActive
+    )
       return new Response("Invalid channelId", { status: 400 });
 
     workflowId = task.workflow.id;

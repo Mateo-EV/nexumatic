@@ -186,6 +186,7 @@ export const workflows = pgTable("workflows", {
     .notNull()
     .defaultNow(),
   isRunning: boolean("is_running").default(false).notNull(),
+  isActive: boolean("is_active").default(false).notNull(),
 });
 
 export const workflowsRelations = relations(workflows, ({ one, many }) => ({

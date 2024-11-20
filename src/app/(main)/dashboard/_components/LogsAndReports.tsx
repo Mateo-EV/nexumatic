@@ -6,11 +6,48 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { AlertCircleIcon, FileTextIcon } from "lucide-react";
+import { type TaskLogStatus } from "@/server/db/schema";
+import {
+  AlertCircleIcon,
+  CheckIcon,
+  FileTextIcon,
+  TriangleAlertIcon,
+} from "lucide-react";
 
-type LogsAndReportsProps = {};
+type LogsAndReportsProps = {
+  logs: {
+    id: number;
+    logMessage: string;
+    status: TaskLogStatus;
+    workflowId: string;
+  }[];
+};
 
-export const LogsAndReports = ({}: LogsAndReportsProps) => {
+const Icon = {
+  error: AlertCircleIcon,
+  success: CheckIcon,
+  warning: TriangleAlertIcon,
+};
+const getLogColor = (type: string) => {
+  switch (type) {
+    case "success":
+      return "text-green-400";
+    case "warning":
+      return "text-yellow-400";
+    case "error":
+      return "text-red-400";
+    default:
+      return "text-gray-400";
+  }
+};
+
+const getIcon = (status: TaskLogStatus) => {
+  const Component = Icon[status];
+
+  return <Component className={`h-4 w-4 ${getLogColor(status)}`} />;
+};
+
+export const LogsAndReports = ({ logs }: LogsAndReportsProps) => {
   return (
     <Card>
       <CardHeader>
@@ -22,26 +59,12 @@ export const LogsAndReports = ({}: LogsAndReportsProps) => {
             <FileTextIcon className="h-4 w-4" />
             <span>Executions Report - Last Week</span>
           </div>
-          <div className="flex items-center gap-2">
-            <AlertCircleIcon className="h-4 w-4 text-red-500" />
-            <span>Error Log - Last 24 Hours</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <AlertCircleIcon className="h-4 w-4 text-red-500" />
-            <span>Error Log - Last 24 Hours</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <AlertCircleIcon className="h-4 w-4 text-red-500" />
-            <span>Error Log - Last 24 Hours</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <AlertCircleIcon className="h-4 w-4 text-red-500" />
-            <span>Error Log - Last 24 Hours</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <AlertCircleIcon className="h-4 w-4 text-red-500" />
-            <span>Error Log - Last 24 Hours</span>
-          </div>
+          {logs.map((log) => (
+            <div className="flex items-center gap-2" key={log.id}>
+              {getIcon(log.status)}
+              <span>{log.logMessage}</span>
+            </div>
+          ))}
         </div>
       </CardContent>
       <CardFooter>
