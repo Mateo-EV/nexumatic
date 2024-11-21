@@ -1,3 +1,4 @@
+import { Toaster } from "@/components/ui/sonner";
 import "@/styles/globals.css";
 
 import { type Metadata } from "next";
@@ -32,6 +33,7 @@ export default function RootLayout({
           >
             {children}
           </ThemeProvider>
+          <Toaster position="top-center" />
         </body>
       </html>
     </ViewTransitions>

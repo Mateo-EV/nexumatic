@@ -1,9 +1,15 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ZapIcon } from "lucide-react";
 
-type RecentActivityProps = {};
+type RecentActivityProps = {
+  executions: {
+    id: string;
+    name: string;
+    lastExecution: Date | null;
+  }[];
+};
 
-export const RecentActivity = ({}: RecentActivityProps) => {
+export const RecentActivity = ({ executions }: RecentActivityProps) => {
   return (
     <Card>
       <CardHeader>
@@ -11,14 +17,12 @@ export const RecentActivity = ({}: RecentActivityProps) => {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <ZapIcon className="h-4 w-4" />
-            <span>Workflow ;name; executed </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <ZapIcon className="h-4 w-4" />
-            <span>New workflow created: </span>
-          </div>
+          {executions.map(({ id, name }) => (
+            <div className="flex items-center gap-2" key={id}>
+              <ZapIcon className="h-4 w-4" />
+              <span>Workflow &quot;{name}&quot; executed </span>
+            </div>
+          ))}
         </div>
       </CardContent>
     </Card>

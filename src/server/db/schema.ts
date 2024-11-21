@@ -26,7 +26,7 @@ export const users = pgTable("users", {
     precision: 0,
   }).defaultNow(),
   image: varchar("image", { length: 255 }),
-  stripeCustomerId: varchar("stripe_customer_id", { length: 255 }),
+  subscriptionStripeId: varchar("subscription_id", { length: 255 }),
   createdAt: timestamp("created_at", {
     precision: 0,
     mode: "date",
@@ -118,10 +118,9 @@ export const verificationTokens = pgTable(
 );
 
 export const plans = pgTable("plans", {
-  id: uuid("id").defaultRandom().primaryKey(),
+  id: varchar("id", { length: 255 }).primaryKey().notNull(),
   name: varchar("name", { length: 255 }).notNull(),
-  stripePriceId: varchar("stripe_price_id", { length: 255 }).unique().notNull(),
-  features: jsonb("features").notNull(),
+  features: jsonb("features").notNull().$type<string[]>(),
 });
 
 export const plansRelations = relations(plans, ({ many }) => ({
@@ -131,11 +130,13 @@ export const plansRelations = relations(plans, ({ many }) => ({
 export type Plan = InferSelectModel<typeof plans>;
 
 export type SubscriptionStatus =
-  | "incomplete"
-  | "incomplete_expire"
   | "active"
-  | "past_due"
   | "canceled"
+  | "incomplete"
+  | "incomplete_expired"
+  | "past_due"
+  | "paused"
+  | "trialing"
   | "unpaid";
 
 export const subscriptions = pgTable("subscriptions", {
@@ -143,7 +144,7 @@ export const subscriptions = pgTable("subscriptions", {
   userId: uuid("user_id")
     .notNull()
     .references(() => users.id, { onDelete: "restrict", onUpdate: "cascade" }),
-  planId: uuid("plan_id")
+  planId: varchar("plan_id", { length: 255 })
     .notNull()
     .references(() => plans.id, { onDelete: "restrict", onUpdate: "cascade" }),
   stripeSubscriptionId: varchar("stripe_subscription_id", {

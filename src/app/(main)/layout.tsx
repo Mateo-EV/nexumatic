@@ -1,4 +1,3 @@
-import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "@/providers/AuthProvider";
 import { getSession } from "@/server/session";
 import { TRPCReactProvider } from "@/trpc/react";
@@ -23,7 +22,6 @@ export default async function MainLayout({
         {children}
         <WorkflowNotifications />
       </TRPCReactProvider>
-      <Toaster position="top-center" />
     </AuthProvider>
   );
 }

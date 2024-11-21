@@ -25,6 +25,8 @@ export const env = createEnv({
     SLACK_BOT_TOKEN: z.string(),
     NOTION_CLIENT_SECRET: z.string(),
     SOKETI_APP_SECRET: z.string(),
+    STRIPE_SECRET_KEY: z.string(),
+    STRIPE_WEBHOOK_SECRET: z.string(),
   },
 
   /**
@@ -40,6 +42,7 @@ export const env = createEnv({
     NEXT_PUBLIC_NOTION_CLIENT_ID: z.string(),
     NEXT_PUBLIC_SOKETI_APP_ID: z.string(),
     NEXT_PUBLIC_SOKETI_APP_KEY: z.string(),
+    NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string(),
   },
 
   /**
@@ -67,6 +70,10 @@ export const env = createEnv({
     NEXT_PUBLIC_SOKETI_APP_ID: process.env.NEXT_PUBLIC_SOKETI_APP_ID,
     NEXT_PUBLIC_SOKETI_APP_KEY: process.env.NEXT_PUBLIC_SOKETI_APP_KEY,
     SOKETI_APP_SECRET: process.env.SOKETI_APP_SECRET,
+    NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY:
+      process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
+    STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
+    STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially

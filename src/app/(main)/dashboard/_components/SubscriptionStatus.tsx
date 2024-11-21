@@ -1,8 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-type SubscriptionStatusProps = {};
-
-export const SubscriptionStatus = ({}: SubscriptionStatusProps) => {
+export const SubscriptionStatus = () => {
   return (
     <Card>
       <CardHeader>

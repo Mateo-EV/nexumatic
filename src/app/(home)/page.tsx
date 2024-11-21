@@ -1,7 +1,8 @@
 import { MaxWidthWrapper } from "@/components/MaxWidthWrapper";
+import SubscriptionSection from "@/components/payments/SubscriptionSection";
 import { Button } from "@/components/ui/button";
 
-export default async function Home() {
+export default function Home() {
   return (
     <MaxWidthWrapper className="mt-28 flex flex-col items-center justify-center text-center">
       <Button variant="outline" size="sm" className="mb-4 rounded-full px-4">
@@ -16,6 +17,9 @@ export default async function Home() {
         Integrate with tools like Google Drive, Slack, Notion, and more while
         managing everything in real-time with our intuitive dashboard.
       </p>
+      <div className="mt-40">
+        <SubscriptionSection />
+      </div>
     </MaxWidthWrapper>
   );
 }
