@@ -23,6 +23,12 @@ export async function createCheckoutSession(priceId: string) {
       success_url: `${env.NEXT_PUBLIC_BASE_URL}/billing?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${env.NEXT_PUBLIC_BASE_URL}`,
       allow_promotion_codes: true,
+      subscription_data: {
+        metadata: {
+          userId: session.user.id,
+          email: session.user.email,
+        },
+      },
     });
 
     return { sessionId: checkoutSession.id };

@@ -36,29 +36,11 @@ export async function POST(req: Request) {
   }
 }
 
-async function getCustomerEmail(customerId: string) {
-  try {
-    const customer = await stripe.customers.retrieve(customerId);
-    return (customer as Stripe.Customer).email;
-  } catch (error) {
-    console.log(error);
-    return null;
-  }
-}
-
 async function handleSubscriptionEvent(
   event: Stripe.Event,
   type: "created" | "updated" | "deleted",
 ) {
   const subscription = event.data.object as Stripe.Subscription;
-  const customerEmail = await getCustomerEmail(subscription.customer as string);
-
-  if (!customerEmail) {
-    return Response.json(
-      { error: "Customer email could not be fetched" },
-      { status: 400 },
-    );
-  }
 
   if (type === "deleted") {
     const [subscriptionUpdated] = await db
@@ -71,7 +53,7 @@ async function handleSubscriptionEvent(
       await db
         .update(users)
         .set({ subscriptionStripeId: null })
-        .where(eq(users.email, customerEmail));
+        .where(eq(users.id, subscription.metadata.userId!));
     }
   } else {
     const startDate = new Date(subscription.created * 1000);
@@ -79,7 +61,6 @@ async function handleSubscriptionEvent(
     endDate.setDate(endDate.getDate() + 30);
 
     const subscriptionData = {
-      stripeSubscriptionId: subscription.id,
       status: subscription.status,
       currentPeriodStart: startDate,
       currentPeriodEnd: endDate,
@@ -88,7 +69,9 @@ async function handleSubscriptionEvent(
     };
 
     if (type === "created") {
-      await db.insert(subscriptions).values(subscriptionData);
+      await db
+        .insert(subscriptions)
+        .values({ ...subscriptionData, stripeSubscriptionId: subscription.id });
     } else {
       await db
         .update(subscriptions)
