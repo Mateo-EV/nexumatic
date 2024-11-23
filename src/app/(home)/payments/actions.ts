@@ -2,7 +2,11 @@
 
 import { env } from "@/env";
 import { stripe } from "@/lib/stripe";
+import { db } from "@/server/db";
+import { getSubscription } from "@/server/db/data";
+import { subscriptions, users } from "@/server/db/schema";
 import { getSession } from "@/server/session";
+import { eq } from "drizzle-orm";
 
 export async function createCheckoutSession(priceId: string) {
   const session = await getSession();
@@ -35,5 +39,39 @@ export async function createCheckoutSession(priceId: string) {
   } catch (error) {
     console.log(error);
     return { error: "Something went wrong" };
+  }
+}
+
+export async function cancelSubscription() {
+  const session = await getSession();
+
+  if (!session) return { error: "Unauthorized" };
+
+  const subscription = await getSubscription();
+
+  if (!subscription || subscription.status !== "active") {
+    return { message: "Subscription canceled" };
+  }
+
+  try {
+    await stripe.subscriptions.cancel(subscription.stripeSubscriptionId);
+
+    const [subscriptionUpdated] = await db
+      .update(subscriptions)
+      .set({ status: "canceled" })
+      .where(eq(subscriptions.id, subscription.id))
+      .returning({ status: subscriptions.status });
+
+    if (subscriptionUpdated?.status === "canceled") {
+      await db
+        .update(users)
+        .set({ subscriptionStripeId: null })
+        .where(eq(users.id, session.user.id));
+    }
+
+    return { message: "Subscription canceled" };
+  } catch (error) {
+    console.log(error);
+    return { message: "Error while canceling subscription" };
   }
 }

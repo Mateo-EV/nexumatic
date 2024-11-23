@@ -1,5 +1,5 @@
 import { formatExpiresAt } from "@/lib/utils";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, gt, sql } from "drizzle-orm";
 import { unstable_cache } from "next/cache";
 import "server-only";
 import { db } from ".";
@@ -10,7 +10,9 @@ import {
   services,
   plans,
   type Plan,
+  subscriptions,
 } from "./schema";
+import { cache } from "react";
 
 export const getAvailableServicesForUser = unstable_cache(
   async () => {
@@ -158,3 +160,29 @@ export const getPlans: () => Promise<Plan[]> = unstable_cache(
   ["plans"],
   { revalidate: 3600 * 24 * 7, tags: ["plans"] },
 );
+
+export const getSubscription = cache(async () => {
+  const session = (await getSession())!;
+
+  if (!session.user.subscriptionStripeId) {
+    const subscription = await db.query.subscriptions.findFirst({
+      where: and(
+        eq(subscriptions.userId, session.user.id),
+        gt(subscriptions.currentPeriodEnd, new Date()),
+      ),
+      with: { plan: true },
+    });
+
+    return subscription ?? null;
+  }
+
+  const subscription = await db.query.subscriptions.findFirst({
+    where: eq(
+      subscriptions.stripeSubscriptionId,
+      session.user.subscriptionStripeId,
+    ),
+    with: { plan: true },
+  });
+
+  return subscription ?? null;
+});

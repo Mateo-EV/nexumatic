@@ -15,6 +15,7 @@ import {
   getMonthlyExecutions,
 } from "./data";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getSubscription } from "@/server/db/data";
 
 export default function DashboardPage() {
   return (
@@ -46,6 +47,7 @@ export default function DashboardPage() {
 
 async function DashboardContent() {
   const [
+    subscription,
     monthlyExecutions,
     executedWorkflows,
     activeWorkflows,
@@ -53,6 +55,7 @@ async function DashboardContent() {
     logs,
     efficiencyAnalysis,
   ] = await Promise.all([
+    getSubscription(),
     getMonthlyExecutions(),
     getExecutedWorkflows(),
     getActiveWorkflows(),
@@ -64,7 +67,7 @@ async function DashboardContent() {
   return (
     <>
       <div className="grid gap-4 md:grid-cols-3">
-        <SubscriptionStatus />
+        <SubscriptionStatus subscription={subscription} />
         <RecentActivity executions={executedWorkflows} />
         <UsageSummary monthlyExecutions={monthlyExecutions} />
       </div>
