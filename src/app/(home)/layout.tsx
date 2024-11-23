@@ -1,5 +1,6 @@
 import { NextAuthProvider } from "@/providers/NextAuthProvider";
 import { Navbar } from "./_components/Navbar";
+import LoginModalProvider from "@/providers/LoginModalProvider";
 
 export default function HomeLayout({
   children,
@@ -7,9 +8,11 @@ export default function HomeLayout({
   children: React.ReactNode;
 }) {
   return (
-    <NextAuthProvider refetchOnWindowFocus={false}>
-      <Navbar />
-      <main>{children}</main>
-    </NextAuthProvider>
+    <LoginModalProvider>
+      <NextAuthProvider refetchOnWindowFocus={false}>
+        <Navbar />
+        <main>{children}</main>
+      </NextAuthProvider>
+    </LoginModalProvider>
   );
 }

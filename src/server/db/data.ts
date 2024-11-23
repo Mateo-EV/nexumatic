@@ -4,7 +4,13 @@ import { unstable_cache } from "next/cache";
 import "server-only";
 import { db } from ".";
 import { getSession } from "../session";
-import { connections, type Service, services } from "./schema";
+import {
+  connections,
+  type Service,
+  services,
+  plans,
+  type Plan,
+} from "./schema";
 
 export const getAvailableServicesForUser = unstable_cache(
   async () => {
@@ -130,3 +136,25 @@ export async function getConnection(
 
   return connection;
 }
+
+export const getPlans: () => Promise<Plan[]> = unstable_cache(
+  async () => {
+    const plansFromDb = await db.select().from(plans);
+    return [
+      {
+        id: "free-plan",
+        name: "Free Plan",
+        price: "$0",
+        features: [
+          "1 automated workflow",
+          "Up to 3 service Integrations",
+          "Sequential task execution only",
+          "Analytics and monitoring panel",
+        ],
+      },
+      ...plansFromDb,
+    ];
+  },
+  ["plans"],
+  { revalidate: 3600 * 24 * 7, tags: ["plans"] },
+);

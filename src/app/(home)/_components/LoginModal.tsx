@@ -2,23 +2,22 @@
 
 import { Icons } from "@/components/Icons";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { ArrowRightIcon } from "lucide-react";
-import { useState } from "react";
 import { signIn } from "next-auth/react";
+import { useState } from "react";
 
-export const LoginModal = () => {
+export const LoginModal = ({
+  isOpen,
+  setIsOpen,
+}: {
+  isOpen: boolean;
+  setIsOpen: (state: boolean) => void;
+}) => {
   const [signInClicked, setSignInClicked] = useState(false);
 
   return (
-    <Dialog>
-      <DialogTrigger asChild>
-        <Button className="gap-2 px-5" size="sm">
-          <span>Sign In</span>
-          <ArrowRightIcon className="size-4" />
-        </Button>
-      </DialogTrigger>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogContent>
         <div className="w-full">
           <div className="flex flex-col items-center justify-center space-y-3 border-b bg-background px-4 py-6 pt-8 text-center md:px-16">
