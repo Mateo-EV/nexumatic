@@ -1,11 +1,16 @@
 /* eslint-disable @typescript-eslint/no-empty-object-type */
 import { db } from "@/server/db";
-import { getConnection } from "@/server/db/data";
-import { workflows } from "@/server/db/schema";
+import {
+  getConnection,
+  getSubscription,
+  getSubscriptionByUser,
+} from "@/server/db/data";
+import { workflowRuns, workflows } from "@/server/db/schema";
 import { GoogleDriveService } from "@/server/services/GoogleDriveService";
 import { WorkflowService } from "@/server/services/WorkflowService";
+import { getLimitMontlyExecutions } from "@/server/subscription";
 import axios from "axios";
-import { eq, sql } from "drizzle-orm";
+import { count, eq, sql } from "drizzle-orm";
 import { headers } from "next/headers";
 import { object, string } from "zod";
 
@@ -121,7 +126,7 @@ export async function POST() {
 
     const task = await db.query.tasks.findFirst({
       where: sql`configuration->>'channelId'=${headerList["x-goog-channel-id"]}`,
-      with: { workflow: { with: { user: { columns: { id: true } } } } },
+      with: { workflow: { with: { user: true } } },
     });
 
     if (
@@ -130,6 +135,21 @@ export async function POST() {
       !task.workflow.isActive
     )
       return new Response("Invalid channelId", { status: 400 });
+
+    const subscription = await getSubscriptionByUser(task.workflow.user);
+
+    const limitedExecutions = getLimitMontlyExecutions(subscription?.plan);
+
+    if (limitedExecutions) {
+      const [executions] = await db
+        .select({ count: count(workflowRuns.id) })
+        .from(workflowRuns)
+        .where(eq(workflowRuns.workflowId, task.workflowId));
+
+      if (executions!.count >= limitedExecutions) {
+        return new Response("Invalid channelId", { status: 400 });
+      }
+    }
 
     workflowId = task.workflow.id;
 

@@ -67,11 +67,6 @@ export const LogsAndReports = ({ logs }: LogsAndReportsProps) => {
           ))}
         </div>
       </CardContent>
-      <CardFooter>
-        <Button className="w-full" variant="outline">
-          See All Logs
-        </Button>
-      </CardFooter>
     </Card>
   );
 };

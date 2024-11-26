@@ -1,15 +1,36 @@
 import { workflowSchema } from "@/lib/validators/both";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
+import { getSubscription } from "@/server/db/data";
 import { tasks, workflows } from "@/server/db/schema";
+import { getLimitAutomatedWorkflows } from "@/server/subscription";
 import { deleteManyTasks } from "@/server/uploadthing";
 import { TRPCError } from "@trpc/server";
-import { and, desc, eq } from "drizzle-orm";
+import { and, count, desc, eq } from "drizzle-orm";
 import { string } from "zod";
 
 export const workflowRouter = createTRPCRouter({
   create: protectedProcedure
     .input(workflowSchema)
     .mutation(async ({ ctx, input: { name, description } }) => {
+      const subscription = await getSubscription();
+
+      const limitedWorkflows = getLimitAutomatedWorkflows(subscription?.plan);
+
+      if (limitedWorkflows) {
+        const [workflowsCount] = await ctx.db
+          .select({ count: count(workflows.id) })
+          .from(workflows)
+          .where(eq(workflows.userId, ctx.session.user.id));
+
+        if (workflowsCount!.count >= limitedWorkflows) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            cause: "LIMITED PLAN",
+            message: `Your plan is up to ${limitedWorkflows} workflows`,
+          });
+        }
+      }
+
       const [workflowCreated] = await ctx.db
         .insert(workflows)
         .values({

@@ -69,7 +69,10 @@ async function DashboardContent() {
       <div className="grid gap-4 md:grid-cols-3">
         <SubscriptionStatus subscription={subscription} />
         <RecentActivity executions={executedWorkflows} />
-        <UsageSummary monthlyExecutions={monthlyExecutions} />
+        <UsageSummary
+          monthlyExecutions={monthlyExecutions}
+          subscription={subscription}
+        />
       </div>
       <div className="grid gap-4 md:grid-cols-2">
         <ActiveWorkflows activeWorkflows={activeWorkflows} />

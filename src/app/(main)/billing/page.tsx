@@ -12,6 +12,7 @@ import { getPlans, getSubscription } from "@/server/db/data";
 import { CheckCircleIcon, XIcon } from "lucide-react";
 import { CheckoutSessionButton } from "./_components/CheckoutSessionButton";
 import { CancelSubscriptionButton } from "./_components/CancelSubscriptionButton";
+import { type Plan } from "@/server/db/schema";
 
 export default async function BillingPage() {
   const plans = await getPlans();
@@ -98,7 +99,7 @@ export default async function BillingPage() {
                   Current Plan
                 </Button>
               ) : (
-                <CheckoutSessionButton plan={plan} />
+                <CheckoutSessionButton plan={plan as Plan} />
               )}
             </CardFooter>
           </Card>

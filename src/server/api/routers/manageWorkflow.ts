@@ -6,6 +6,7 @@ import {
   type TaskDependency,
   taskFiles,
   tasks,
+  workflowRuns,
   workflows,
 } from "@/server/db/schema";
 import {
@@ -14,9 +15,14 @@ import {
 } from "@/server/services/WorkflowService";
 import { deleteManyTasks } from "@/server/uploadthing";
 import { TRPCError } from "@trpc/server";
-import { and, eq, inArray, sql, type SQL } from "drizzle-orm";
+import { and, count, eq, inArray, sql, type SQL } from "drizzle-orm";
 import { string } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
+import { getSubscription } from "@/server/db/data";
+import {
+  getLimitMontlyExecutions,
+  getLimitServiceIntegrations,
+} from "@/server/subscription";
 
 export const manageWorkflowRouter = createTRPCRouter({
   saveDataInWorkflow: protectedProcedure
@@ -41,6 +47,17 @@ export const manageWorkflowRouter = createTRPCRouter({
         });
 
         if (!workflow) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+        const subscription = await getSubscription();
+        const limitServices = getLimitServiceIntegrations(subscription?.plan);
+
+        const uniqueServices = new Set();
+
+        if (limitServices) {
+          for (const taskClient of tasksFromClient) {
+            uniqueServices.add(taskClient.serviceId);
+          }
+        }
 
         const tasksTriggers = await ctx.db.query.services.findMany({
           columns: { id: true, name: true, method: true },
@@ -75,6 +92,22 @@ export const manageWorkflowRouter = createTRPCRouter({
             throw new TRPCError({
               code: "BAD_REQUEST",
             });
+
+          if (limitServices && uniqueServices.size - 1 > limitServices) {
+            throw new TRPCError({
+              code: "FORBIDDEN",
+              cause: "LIMITED PLAN",
+              message: `Your plan is up to ${limitServices} service integrations`,
+            });
+          }
+        } else {
+          if (limitServices && uniqueServices.size > limitServices) {
+            throw new TRPCError({
+              code: "FORBIDDEN",
+              cause: "LIMITED PLAN",
+              message: `Your plan is up to ${limitServices} service integrations`,
+            });
+          }
         }
 
         if (!WorkflowService.validateDependencies(taskDependenciesFromClient)) {
@@ -264,6 +297,25 @@ export const manageWorkflowRouter = createTRPCRouter({
 
       if (workflow.isRunning || !workflow.isActive)
         throw new TRPCError({ code: "BAD_REQUEST" });
+
+      const subscriptions = await getSubscription();
+
+      const limitedExecutions = getLimitMontlyExecutions(subscriptions?.plan);
+
+      if (limitedExecutions) {
+        const [executions] = await ctx.db
+          .select({ count: count(workflowRuns.id) })
+          .from(workflowRuns)
+          .where(eq(workflowRuns.workflowId, workflowId));
+
+        if (executions!.count >= limitedExecutions) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            cause: "LIMITED PLAN",
+            message: `Your plan is up to ${limitedExecutions} executions per workflow`,
+          });
+        }
+      }
 
       await ctx.db
         .update(workflows)

@@ -1,18 +1,19 @@
 import { formatExpiresAt } from "@/lib/utils";
 import { and, eq, gt, sql } from "drizzle-orm";
 import { unstable_cache } from "next/cache";
+import { cache } from "react";
 import "server-only";
 import { db } from ".";
 import { getSession } from "../session";
 import {
   connections,
+  plans,
   type Service,
   services,
-  plans,
-  type Plan,
   subscriptions,
+  User,
+  users,
 } from "./schema";
-import { cache } from "react";
 
 export const getAvailableServicesForUser = unstable_cache(
   async () => {
@@ -139,9 +140,9 @@ export async function getConnection(
   return connection;
 }
 
-export const getPlans: () => Promise<Plan[]> = unstable_cache(
+export const getPlans = unstable_cache(
   async () => {
-    const plansFromDb = await db.select().from(plans);
+    const plansFromDb = await db.select().from(plans).orderBy(plans.price);
     return [
       {
         id: "free-plan",
@@ -149,8 +150,8 @@ export const getPlans: () => Promise<Plan[]> = unstable_cache(
         price: "$0",
         features: [
           "1 automated workflow",
+          "Up to 100 monthly executions",
           "Up to 3 service Integrations",
-          "Sequential task execution only",
           "Analytics and monitoring panel",
         ],
       },
@@ -186,3 +187,24 @@ export const getSubscription = cache(async () => {
 
   return subscription ?? null;
 });
+
+export async function getSubscriptionByUser(user: User) {
+  if (!user.subscriptionStripeId) {
+    const subscription = await db.query.subscriptions.findFirst({
+      where: and(
+        eq(subscriptions.userId, user.id),
+        gt(subscriptions.currentPeriodEnd, new Date()),
+      ),
+      with: { plan: true },
+    });
+
+    return subscription ?? null;
+  }
+
+  const subscription = await db.query.subscriptions.findFirst({
+    where: eq(subscriptions.stripeSubscriptionId, user.subscriptionStripeId),
+    with: { plan: true },
+  });
+
+  return subscription ?? null;
+}

@@ -27,7 +27,7 @@ export const EfficiencyAnalysis = ({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Efficiency Analysis</CardTitle>
+        <CardTitle>Weekly Analysis</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="text-center">
@@ -69,11 +69,6 @@ export const EfficiencyAnalysis = ({
           </BarChart>
         </ChartContainer>
       </CardContent>
-      <CardFooter>
-        <Button className="w-full" variant="outline">
-          See Details
-        </Button>
-      </CardFooter>
     </Card>
   );
 };

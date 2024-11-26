@@ -65,7 +65,8 @@ export async function getLogs() {
     .from(workflowRuns)
     .innerJoin(workflows, eq(workflows.id, workflowRuns.workflowId))
     .innerJoin(taskLogs, eq(taskLogs.workflowRunId, workflowRuns.id))
-    .where(and(eq(workflows.userId, session.user.id)));
+    .where(and(eq(workflows.userId, session.user.id)))
+    .limit(5);
 
   return logs;
 }
@@ -78,7 +79,10 @@ export async function getEfficiencyAnalysis() {
 
   const taskLogsData = await db
     .select({
-      day: sql<string>`TO_CHAR(task_logs.created_at, 'Dy') AS day`,
+      day: sql<string>`TO_CHAR(${taskLogs.created_at}, 'Dy')`.as("day"),
+      dayOrder: sql<number>`TO_CHAR(task_logs.created_at, 'D')::int`.as(
+        "day_order",
+      ),
       totalTasks: sql<number>`COUNT(task_logs.id)`,
       successTasks: sql<
         1 | 0
@@ -93,11 +97,8 @@ export async function getEfficiencyAnalysis() {
         eq(workflows.userId, session.user.id),
       ),
     )
-    .groupBy(
-      taskLogs.created_at,
-      sql`day, EXTRACT(DOW FROM task_logs.created_at)`,
-    )
-    .orderBy(sql`TO_CHAR(task_logs.created_at, 'D')`);
+    .groupBy(sql.raw("day"), sql.raw("day_order"))
+    .orderBy(sql.raw("day_order"));
 
   const efficiencyData = taskLogsData.map((log) => ({
     day: log.day,

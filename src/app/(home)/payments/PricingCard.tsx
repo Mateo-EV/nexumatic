@@ -1,6 +1,7 @@
 "use client";
 
 import { env } from "@/env";
+import { useLoginModal } from "@/providers/LoginModalProvider";
 import { type Plan } from "@/server/db/schema";
 import { loadStripe } from "@stripe/stripe-js";
 import { CheckCircle2Icon } from "lucide-react";
@@ -16,12 +17,11 @@ import {
   CardTitle,
 } from "../../../components/ui/card";
 import { createCheckoutSession } from "./actions";
-import { useLoginModal } from "@/providers/LoginModalProvider";
 
 export default function PricingCard({ plan }: { plan: Plan }) {
   const { data } = useSession();
   const [isPending, startTransition] = useTransition();
-  const { isOpen, setIsOpen } = useLoginModal();
+  const { setIsOpen } = useLoginModal();
 
   const isFreePlan = plan.id === "free-plan";
 

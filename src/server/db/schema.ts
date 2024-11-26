@@ -119,7 +119,9 @@ export const verificationTokens = pgTable(
 
 export const plans = pgTable("plans", {
   id: varchar("id", { length: 255 }).primaryKey().notNull(),
-  name: varchar("name", { length: 255 }).notNull(),
+  name: varchar("name", { length: 255 })
+    .notNull()
+    .$type<"Professional Plan" | "Enterprise Plan">(),
   features: jsonb("features").notNull().$type<string[]>(),
   price: varchar("marketing_price", { length: 5 }),
 });
