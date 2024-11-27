@@ -6,7 +6,10 @@ export function toastUpgradePlan(messagePlan: string) {
   toast("Upgrade your plan", {
     description: messagePlan,
     action: (
-      <Link href="/billing" className={buttonVariants()}>
+      <Link
+        href="/billing"
+        className={buttonVariants({ className: "ml-auto" })}
+      >
         Go
       </Link>
     ),

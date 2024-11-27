@@ -168,8 +168,6 @@ export const ExternalServices = {
       );
 
       if (!data.ok) {
-        console.log(data);
-
         throw new Error("Something went wrong");
       }
 
@@ -321,8 +319,6 @@ export const ExternalServices = {
       const notion = new NotionClient({
         auth: connection.accessToken!,
       });
-
-      console.log(blocks);
 
       const data = await notion.blocks.children.append({
         block_id: configuration.pageId,

@@ -2,6 +2,7 @@ import { WorkflowProvider } from "@/providers/WorkflowProvider";
 import { getAvailableServicesForUser } from "@/server/db/data";
 import { api } from "@/trpc/server";
 import { redirect } from "next/navigation";
+import { WorkflowStateButton } from "../_components/WorkflowStateButton";
 import { WorkflowManagement } from "./_components/WorkflowManagement";
 
 export default async function WorkflowIdPage({
@@ -18,10 +19,10 @@ export default async function WorkflowIdPage({
   return (
     <main className="flex h-[calc(100vh-6.7rem)] flex-col">
       <div
-        className="sticky top-0 flex items-end border-b bg-background/50 px-6 pt-8 backdrop-blur-lg"
+        className="flex items-center justify-between border-b bg-background/50 p-6 backdrop-blur-lg"
         style={{ viewTransitionName: `workflow-container-${workflow.id}` }}
       >
-        <div className="pb-4">
+        <div>
           <h1
             className="text-4xl"
             style={{ viewTransitionName: `workflow-name-${workflow.id}` }}
@@ -39,6 +40,10 @@ export default async function WorkflowIdPage({
             </h2>
           )}
         </div>
+        <WorkflowStateButton
+          workflowId={workflowId}
+          isActive={workflow.isActive}
+        />
       </div>
       <section className="flex-1">
         <WorkflowProvider services={services} workflow={workflow}>

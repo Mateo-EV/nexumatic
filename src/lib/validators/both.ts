@@ -53,3 +53,7 @@ export const workflowTasksSchema = object({
 });
 
 export type workflowTasksSchemaType = z.infer<typeof workflowTasksSchema>;
+
+export const profileSchema = object({
+  name: string().min(1, "Your name is required"),
+});

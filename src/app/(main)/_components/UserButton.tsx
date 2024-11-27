@@ -56,19 +56,13 @@ export const UserButton = () => {
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link
-            href="/dashboard/billing"
-            className="flex items-center space-x-2.5"
-          >
+          <Link href="/billing" className="flex items-center space-x-2.5">
             <CreditCardIcon className="size-4" />
             <p className="text-sm">Billing</p>
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link
-            href="/dashboard/settings"
-            className="flex items-center space-x-2.5"
-          >
+          <Link href="/settings" className="flex items-center space-x-2.5">
             <SettingsIcon className="size-4" />
             <p className="text-sm">Settings</p>
           </Link>

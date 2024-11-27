@@ -6,13 +6,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
+import { Skeleton } from "@/components/ui/skeleton";
 import { type WorkFlow } from "@/server/db/schema";
 import { api } from "@/trpc/react";
 import { useTransitionRouter } from "next-view-transitions";
 import { useEffect } from "react";
 import { WorkflowDeleteButton } from "./WorkflowDeleteButton";
-import { Skeleton } from "@/components/ui/skeleton";
+import { WorkflowStateButton } from "./WorkflowStateButton";
 
 export const Workflows = () => {
   const { data: workflows } = api.workflow.getAllFromUser.useQuery();
@@ -99,7 +99,10 @@ const Workflow = ({ workflow }: WorkflowProps) => {
         onClick={handleClickStopPropagation}
       >
         <WorkflowDeleteButton workflow={workflow} />
-        <Switch id="airplane-mode" className="ml-2" defaultChecked />
+        <WorkflowStateButton
+          workflowId={workflow.id}
+          isActive={workflow.isActive}
+        />
       </div>
     </Card>
   );

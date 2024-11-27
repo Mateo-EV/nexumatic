@@ -1,21 +1,19 @@
+import { Skeleton } from "@/components/ui/skeleton";
+import { getSubscription } from "@/server/db/data";
 import { Suspense } from "react";
 import { ActiveWorkflows } from "./_components/ActiveWorkflows";
 import { ConnectedIntegrations } from "./_components/ConnectedIntegrations";
 import { EfficiencyAnalysis } from "./_components/EfficiencyAnalysis";
 import { LogsAndReports } from "./_components/LogsAndReports";
-import { RecentActivity } from "./_components/RecentActivity";
 import { SubscriptionStatus } from "./_components/SubscriptionStatus";
 import { UsageSummary } from "./_components/UsageSummary";
 import {
   getActiveWorkflows,
   getConnections,
   getEfficiencyAnalysis,
-  getExecutedWorkflows,
   getLogs,
   getMonthlyExecutions,
 } from "./data";
-import { Skeleton } from "@/components/ui/skeleton";
-import { getSubscription } from "@/server/db/data";
 
 export default function DashboardPage() {
   return (
@@ -49,7 +47,6 @@ async function DashboardContent() {
   const [
     subscription,
     monthlyExecutions,
-    executedWorkflows,
     activeWorkflows,
     connections,
     logs,
@@ -57,7 +54,6 @@ async function DashboardContent() {
   ] = await Promise.all([
     getSubscription(),
     getMonthlyExecutions(),
-    getExecutedWorkflows(),
     getActiveWorkflows(),
     getConnections(),
     getLogs(),
@@ -66,9 +62,8 @@ async function DashboardContent() {
 
   return (
     <>
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2">
         <SubscriptionStatus subscription={subscription} />
-        <RecentActivity executions={executedWorkflows} />
         <UsageSummary
           monthlyExecutions={monthlyExecutions}
           subscription={subscription}

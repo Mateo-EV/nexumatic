@@ -9,10 +9,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { getPlans, getSubscription } from "@/server/db/data";
-import { CheckCircleIcon, XIcon } from "lucide-react";
-import { CheckoutSessionButton } from "./_components/CheckoutSessionButton";
-import { CancelSubscriptionButton } from "./_components/CancelSubscriptionButton";
 import { type Plan } from "@/server/db/schema";
+import { CheckCircleIcon } from "lucide-react";
+import { CancelSubscriptionButton } from "./_components/CancelSubscriptionButton";
+import { CheckoutSessionButton } from "./_components/CheckoutSessionButton";
 
 export default async function BillingPage() {
   const plans = await getPlans();

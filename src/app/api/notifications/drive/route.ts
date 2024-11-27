@@ -1,10 +1,6 @@
 /* eslint-disable @typescript-eslint/no-empty-object-type */
 import { db } from "@/server/db";
-import {
-  getConnection,
-  getSubscription,
-  getSubscriptionByUser,
-} from "@/server/db/data";
+import { getConnection, getSubscriptionByUser } from "@/server/db/data";
 import { workflowRuns, workflows } from "@/server/db/schema";
 import { GoogleDriveService } from "@/server/services/GoogleDriveService";
 import { WorkflowService } from "@/server/services/WorkflowService";

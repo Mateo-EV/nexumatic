@@ -11,8 +11,7 @@ import {
   type Service,
   services,
   subscriptions,
-  User,
-  users,
+  type User,
 } from "./schema";
 
 export const getAvailableServicesForUser = unstable_cache(

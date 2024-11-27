@@ -6,7 +6,7 @@ import { getLimitAutomatedWorkflows } from "@/server/subscription";
 import { deleteManyTasks } from "@/server/uploadthing";
 import { TRPCError } from "@trpc/server";
 import { and, count, desc, eq } from "drizzle-orm";
-import { string } from "zod";
+import { boolean, object, string } from "zod";
 
 export const workflowRouter = createTRPCRouter({
   create: protectedProcedure
@@ -103,6 +103,38 @@ export const workflowRouter = createTRPCRouter({
           ),
         );
 
+      if (!workflow) throw new TRPCError({ code: "NOT_FOUND" });
+
       return workflow;
+    }),
+  getIsActive: protectedProcedure
+    .input(string())
+    .query(async ({ ctx, input: workflowId }) => {
+      const [workflow] = await ctx.db
+        .select({ isActive: workflows.isActive })
+        .from(workflows)
+        .where(
+          and(
+            eq(workflows.userId, ctx.session.user.id),
+            eq(workflows.id, workflowId),
+          ),
+        );
+
+      if (!workflow) throw new TRPCError({ code: "NOT_FOUND" });
+
+      return workflow.isActive;
+    }),
+  updateIsActive: protectedProcedure
+    .input(object({ workflowId: string(), isActive: boolean() }))
+    .mutation(async ({ ctx, input: { workflowId, isActive } }) => {
+      await ctx.db
+        .update(workflows)
+        .set({ isActive })
+        .where(
+          and(
+            eq(workflows.userId, ctx.session.user.id),
+            eq(workflows.id, workflowId),
+          ),
+        );
     }),
 });

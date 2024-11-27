@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { type Plan, type Subscription } from "@/server/db/schema";
 
@@ -36,10 +37,15 @@ export const SubscriptionStatus = ({
               {subscription?.status}
             </div>
           )}
-          <div className="text-sm text-muted-foreground">
+          <div className="w-full text-sm text-muted-foreground">
             {subscription?.plan.name ?? "Free Plan"}{" "}
             {subscription &&
               `- Renewal in ${daysUntil(subscription?.currentPeriodEnd)} days`}
+            {!subscription && (
+              <Button size="sm" className="ml-auto block">
+                Upgrade
+              </Button>
+            )}
           </div>
         </div>
       </CardContent>

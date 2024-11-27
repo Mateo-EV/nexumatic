@@ -1,13 +1,6 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer } from "@/components/ui/chart";
 import { Progress } from "@/components/ui/progress";
 import { Bar, BarChart, XAxis } from "recharts";
@@ -22,7 +15,8 @@ export const EfficiencyAnalysis = ({
     return acc + curr.efficiency;
   }, 0);
 
-  const average = totalEfficiency / efficiencyAnalisis.length;
+  const averageCalculated = totalEfficiency / efficiencyAnalisis.length;
+  const average = isNaN(averageCalculated) ? 0 : averageCalculated;
 
   return (
     <Card>

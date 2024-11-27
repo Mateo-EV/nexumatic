@@ -88,26 +88,20 @@ export const manageWorkflowRouter = createTRPCRouter({
               tasksTriggers[0]?.id,
           );
 
-          if (triggerDependsOnAction)
+          if (triggerDependsOnAction) {
             throw new TRPCError({
               code: "BAD_REQUEST",
             });
+          }
+        }
 
-          if (limitServices && uniqueServices.size - 1 > limitServices) {
-            throw new TRPCError({
-              code: "FORBIDDEN",
-              cause: "LIMITED PLAN",
-              message: `Your plan is up to ${limitServices} service integrations`,
-            });
-          }
-        } else {
-          if (limitServices && uniqueServices.size > limitServices) {
-            throw new TRPCError({
-              code: "FORBIDDEN",
-              cause: "LIMITED PLAN",
-              message: `Your plan is up to ${limitServices} service integrations`,
-            });
-          }
+        const difference = tasksTriggers[0]?.name === "Manual Trigger" ? 1 : 0;
+        if (limitServices && uniqueServices.size - difference > limitServices) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            cause: "LIMITED PLAN",
+            message: `Your plan is up to ${limitServices} service integrations`,
+          });
         }
 
         if (!WorkflowService.validateDependencies(taskDependenciesFromClient)) {

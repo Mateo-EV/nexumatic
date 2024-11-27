@@ -1,5 +1,6 @@
 "use client";
 
+import { toastUpgradePlan } from "@/app/(main)/_components/toastUpgradePlan";
 import { Icons } from "@/components/Icons";
 import { Button } from "@/components/ui/button";
 import {
@@ -45,8 +46,12 @@ export const WorkflowManagementMenu = () => {
         createNewSavedPoint();
         toast.success("Workflow saved successfully");
       },
-      onError: () => {
-        toast.error("Something went wrong");
+      onError: (error) => {
+        if (error.data?.code === "FORBIDDEN") {
+          toastUpgradePlan(error.message);
+        } else {
+          toast.error("Something went wrong");
+        }
       },
     });
 
@@ -84,14 +89,21 @@ export const WorkflowManagementMenu = () => {
 
   const { mutate: triggerWorkflow, isPending: isWorkflowTriggering } =
     api.manageWorkflow.triggerWorkflow.useMutation({
-      onError: (e) => {
-        if (e.data?.code === "CONFLICT") {
-          toast.error(e.message);
+      onError: (error) => {
+        if (error.data?.code === "CONFLICT") {
+          toast.error(error.message);
+        } else if (error.data?.code === "FORBIDDEN") {
+          toastUpgradePlan(error.message);
         } else {
           toast.error("Something went wrong");
         }
       },
     });
+
+  const { data: isWorkflowActive } = api.workflow.getIsActive.useQuery(
+    workflow.id,
+    { initialData: workflow.isActive },
+  );
 
   return (
     <>
@@ -113,7 +125,11 @@ export const WorkflowManagementMenu = () => {
                   ? "glow-on-hover"
                   : undefined
             }
-            onClick={() => triggerWorkflow(workflow.id)}
+            onClick={() =>
+              isWorkflowActive
+                ? triggerWorkflow(workflow.id)
+                : toast.warning("Your workflow is not active")
+            }
             variant={isWorkflowTriggering ? "destructive" : "default"}
             disabled={isWorkflowTriggering || !canBeTriggered}
           >

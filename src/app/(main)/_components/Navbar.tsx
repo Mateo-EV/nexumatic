@@ -1,9 +1,8 @@
 import { Icons } from "@/components/Icons";
 import { ModeToggle } from "@/components/ModeToggle";
-import { NavbarSearch } from "./NavbarSearch";
+import { Link } from "next-view-transitions";
 import { NavbarTabs } from "./NavbarTabs";
 import { UserButton } from "./UserButton";
-import { Link } from "next-view-transitions";
 
 export const Navbar = () => {
   return (
@@ -14,7 +13,11 @@ export const Navbar = () => {
             <Icons.logo className="size-7 text-primary" />
           </Link>
           <span className="text-muted-foreground">/</span>
-          <NavbarSearch />
+          <h1 className="text-xl font-bold">
+            <span>Nexu</span>
+            <span className="text-blue-500">matic</span>
+          </h1>
+          {/* <NavbarSearch /> */}
         </div>
         <div className="flex gap-4">
           <ModeToggle />

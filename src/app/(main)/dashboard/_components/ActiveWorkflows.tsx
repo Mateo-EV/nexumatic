@@ -15,6 +15,8 @@ type ActiveWorkflowsProps = {
 };
 
 export const ActiveWorkflows = ({ activeWorkflows }: ActiveWorkflowsProps) => {
+  console.log(activeWorkflows);
+
   return (
     <Card>
       <CardHeader>

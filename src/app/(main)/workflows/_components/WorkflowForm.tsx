@@ -15,6 +15,7 @@ import { workflowSchema } from "@/lib/validators/both";
 import { api } from "@/trpc/react";
 import { memo } from "react";
 import { toast } from "sonner";
+import { toastUpgradePlan } from "../../_components/toastUpgradePlan";
 
 type WorkflowFormProps = {
   closeModal: () => void;
@@ -32,8 +33,12 @@ export const WorkflowForm = memo(({ closeModal }: WorkflowFormProps) => {
 
   const { mutate: createWorkFlow, isPending } = api.workflow.create.useMutation(
     {
-      onError: () => {
-        toast.error("Something went wrong");
+      onError: (error) => {
+        if (error.data?.code === "FORBIDDEN") {
+          toastUpgradePlan(error.message);
+        } else {
+          toast.error("Something went wrong");
+        }
       },
       onSuccess: async (workflow) => {
         await apiUtils.workflow.getAllFromUser.cancel();
@@ -48,6 +53,8 @@ export const WorkflowForm = memo(({ closeModal }: WorkflowFormProps) => {
         });
 
         toast.success("Worflow created succesfully");
+      },
+      onSettled: () => {
         closeModal();
       },
     },
