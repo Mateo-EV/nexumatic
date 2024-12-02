@@ -24,7 +24,7 @@ export default async function WorkflowIdPage({
       >
         <div>
           <h1
-            className="text-4xl"
+            className="text-xl md:text-4xl"
             style={{ viewTransitionName: `workflow-name-${workflow.id}` }}
           >
             {workflow.name}
@@ -45,7 +45,7 @@ export default async function WorkflowIdPage({
           isActive={workflow.isActive}
         />
       </div>
-      <section className="flex-1">
+      <section className="relative flex-1">
         <WorkflowProvider services={services} workflow={workflow}>
           <WorkflowManagement />
         </WorkflowProvider>

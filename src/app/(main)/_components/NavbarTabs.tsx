@@ -66,7 +66,7 @@ export const NavbarTabs = () => {
   return (
     <nav
       ref={navRef}
-      className="relative z-0 flex flex-shrink-0 items-center justify-center pb-2"
+      className="relative z-0 flex w-[489px] items-center justify-center pb-2"
       onPointerLeave={() => setHoveredTabIndex(null)}
     >
       {menuOptions.map(({ name, href }) => {

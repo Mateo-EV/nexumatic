@@ -24,7 +24,9 @@ export const Navbar = () => {
           <UserButton />
         </div>
       </div>
-      <NavbarTabs />
+      <div className="max-w-full overflow-x-auto [scrollbar-width:_none]">
+        <NavbarTabs />
+      </div>
     </div>
   );
 };
