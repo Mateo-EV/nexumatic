@@ -171,14 +171,14 @@ const WorkflowManagementMenuTasks = () => {
         <TabsTrigger value="actions">Actions</TabsTrigger>
       </TabsList>
       <TabsContent value="triggers">
-        <div className="flex flex-col gap-4 p-4">
+        <div className="scrollbar flex h-[calc(100vh-21.5rem)] flex-col gap-4 overflow-y-auto p-4">
           {services.indexedByType.triggers.map((service) => (
             <TasksServicesCard key={service.id} {...service} />
           ))}
         </div>
       </TabsContent>
       <TabsContent value="actions">
-        <div className="flex flex-col gap-4 p-4">
+        <div className="scrollbar flex h-[calc(100vh-21.5rem)] flex-col gap-4 overflow-y-auto p-4">
           {services.indexedByType.actions.map((service) => (
             <TasksServicesCard key={service.id} {...service} />
           ))}
